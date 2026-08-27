@@ -3,12 +3,18 @@ using Supabase.Postgrest;
 
 namespace BookCatalog.Services;
 
+public enum BookSort
+{
+    Recent,
+    TitleAsc,
+    TitleDesc
+}
+
 public class BookFilter
 {
     public string? Title { get; set; }
     public string? Author { get; set; }
-    public DateTime? CreatedFrom { get; set; }
-    public DateTime? CreatedTo { get; set; }
+    public BookSort Sort { get; set; } = BookSort.Recent;
 }
 
 public class BookService
@@ -37,17 +43,12 @@ public class BookService
             query = query.Filter("author", Constants.Operator.ILike, $"%{filter.Author}%");
         }
 
-        if (filter?.CreatedFrom != null)
+        var result = (filter?.Sort ?? BookSort.Recent) switch
         {
-            query = query.Filter("created_at", Constants.Operator.GreaterThanOrEqual, filter.CreatedFrom.Value.ToString("O"));
-        }
-
-        if (filter?.CreatedTo != null)
-        {
-            query = query.Filter("created_at", Constants.Operator.LessThanOrEqual, filter.CreatedTo.Value.ToString("O"));
-        }
-
-        var result = await query.Order("created_at", Constants.Ordering.Descending).Get();
+            BookSort.TitleAsc => await query.Order("title", Constants.Ordering.Ascending).Get(),
+            BookSort.TitleDesc => await query.Order("title", Constants.Ordering.Descending).Get(),
+            _ => await query.Order("created_at", Constants.Ordering.Descending).Get()
+        };
         return result.Models;
     }
 

@@ -319,14 +319,14 @@ label {
     margin-top: 0;
 }
 
-.date-filter {
+.sort-select {
     display: flex;
     align-items: center;
     gap: 0.5rem;
     font-size: 0.85rem;
 }
 
-.date-filter input {
+.sort-select select {
     flex: 1;
 }
 

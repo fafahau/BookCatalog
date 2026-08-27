@@ -26,13 +26,13 @@ else
     <div class="filters">
         <input placeholder="Filtrer par titre" @bind="_filter.Title" @bind:event="oninput" @onkeyup="ReloadBooksAsync"/>
         <input placeholder="Filtrer par auteur" @bind="_filter.Author" @bind:event="oninput" @onkeyup="ReloadBooksAsync"/>
-        <label class="date-filter">
-            Ajouté depuis
-            <input type="date" @bind="_createdFrom" @bind:event="oninput" @onchange="ReloadBooksAsync"/>
-        </label>
-        <label class="date-filter">
-            jusqu'au
-            <input type="date" @bind="_createdTo" @bind:event="oninput" @onchange="ReloadBooksAsync"/>
+        <label class="sort-select">
+            Trier par
+            <select @bind="_filter.Sort" @bind:after="ReloadBooksAsync">
+                <option value="@BookSort.Recent">Plus récent</option>
+                <option value="@BookSort.TitleAsc">Titre (A → Z)</option>
+                <option value="@BookSort.TitleDesc">Titre (Z → A)</option>
+            </select>
         </label>
 
         <div class="view-toggle">
@@ -101,8 +101,6 @@ else
     private bool _booksLoading = true;
     private ViewMode _viewMode = ViewMode.List;
     private readonly BookFilter _filter = new();
-    private DateTime? _createdFrom;
-    private DateTime? _createdTo;
 
     protected override async Task OnInitializedAsync()
     {
@@ -116,8 +114,6 @@ else
     private async Task ReloadBooksAsync()
     {
         _booksLoading = true;
-        _filter.CreatedFrom = _createdFrom;
-        _filter.CreatedTo = _createdTo?.AddDays(1).AddTicks(-1);
         _books = await BookService.GetByCollectionAsync(Id, _filter);
         _booksLoading = false;
         StateHasChanged();
