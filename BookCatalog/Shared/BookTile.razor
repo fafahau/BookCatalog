@@ -1,0 +1,12 @@
+<div class="book-tile" @onclick="OnClick">
+    <img class="book-tile-img" src="@(Book.PhotoUrl1 ?? "icon-192.png")" alt=""/>
+    <div class="book-tile-title">@Book.Title</div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public Book Book { get; set; } = null!;
+
+    [Parameter]
+    public EventCallback OnClick { get; set; }
+}

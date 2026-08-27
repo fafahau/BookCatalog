@@ -1,0 +1,141 @@
+@page "/login"
+@layout LoginLayout
+@inject AuthService AuthService
+@inject NavigationManager Navigation
+
+<PageTitle>Connexion</PageTitle>
+
+<div class="auth-card">
+    <h1>📚 BookCatalog</h1>
+
+    @if (_mode == Mode.Login)
+    {
+        <h2>Connexion</h2>
+        <EditForm Model="_model" OnValidSubmit="LoginAsync">
+            <DataAnnotationsValidator/>
+            <label>
+                Email
+                <InputText @bind-Value="_model.Email" type="email" autocomplete="username"/>
+            </label>
+            <label>
+                Mot de passe
+                <InputText @bind-Value="_model.Password" type="password" autocomplete="current-password"/>
+            </label>
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <p class="form-error">@_error</p>
+            }
+
+            <button type="submit" class="primary" disabled="@_busy">Se connecter</button>
+        </EditForm>
+        <p class="switch-mode">
+            Pas encore de compte ?
+            <button class="link-button" @onclick="() => SwitchMode(Mode.Register)">Créer un compte</button>
+        </p>
+    }
+    else
+    {
+        <h2>Créer un compte</h2>
+        <EditForm Model="_model" OnValidSubmit="RegisterAsync">
+            <DataAnnotationsValidator/>
+            <label>
+                Nom affiché
+                <InputText @bind-Value="_model.DisplayName" autocomplete="name"/>
+            </label>
+            <label>
+                Email
+                <InputText @bind-Value="_model.Email" type="email" autocomplete="username"/>
+            </label>
+            <label>
+                Mot de passe (6 caractères min.)
+                <InputText @bind-Value="_model.Password" type="password" autocomplete="new-password"/>
+            </label>
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <p class="form-error">@_error</p>
+            }
+            @if (!string.IsNullOrEmpty(_info))
+            {
+                <p class="form-info">@_info</p>
+            }
+
+            <button type="submit" class="primary" disabled="@_busy">Créer le compte</button>
+        </EditForm>
+        <p class="switch-mode">
+            Déjà un compte ?
+            <button class="link-button" @onclick="() => SwitchMode(Mode.Login)">Se connecter</button>
+        </p>
+        <p class="hint">Un nouveau compte est en lecture seule par défaut ; un administrateur doit ensuite vous accorder les droits d'édition.</p>
+    }
+</div>
+
+@code {
+    private enum Mode { Login, Register }
+    private Mode _mode = Mode.Login;
+    private readonly Credentials _model = new();
+    private string? _error;
+    private string? _info;
+    private bool _busy;
+
+    private void SwitchMode(Mode mode)
+    {
+        _mode = mode;
+        _error = null;
+        _info = null;
+    }
+
+    private async Task LoginAsync()
+    {
+        _busy = true;
+        _error = null;
+        var error = await AuthService.LoginAsync(_model.Email, _model.Password);
+        _busy = false;
+
+        if (error == null)
+        {
+            Navigation.NavigateTo("/");
+        }
+        else
+        {
+            _error = error;
+        }
+    }
+
+    private async Task RegisterAsync()
+    {
+        _busy = true;
+        _error = null;
+        _info = null;
+        var (success, needsEmailConfirmation, error) = await AuthService.RegisterAsync(_model.Email, _model.Password, _model.DisplayName);
+        _busy = false;
+
+        if (!success)
+        {
+            _error = error;
+        }
+        else if (needsEmailConfirmation)
+        {
+            _info = "Compte créé. Vérifiez votre boîte mail pour confirmer votre adresse avant de vous connecter.";
+            _mode = Mode.Login;
+        }
+        else
+        {
+            Navigation.NavigateTo("/");
+        }
+    }
+
+    private class Credentials
+    {
+        [System.ComponentModel.DataAnnotations.Required]
+        [System.ComponentModel.DataAnnotations.EmailAddress]
+        public string Email { get; set; } = string.Empty;
+
+        [System.ComponentModel.DataAnnotations.Required]
+        [System.ComponentModel.DataAnnotations.MinLength(6)]
+        public string Password { get; set; } = string.Empty;
+
+        public string DisplayName { get; set; } = string.Empty;
+    }
+}

@@ -1,0 +1,15 @@
+<div class="book-list-item" @onclick="OnClick">
+    <img class="book-thumb" src="@(Book.PhotoUrl1 ?? "icon-192.png")" alt=""/>
+    <div class="book-info">
+        <div class="book-title">@Book.Title</div>
+        <div class="book-author">@Book.Author</div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public Book Book { get; set; } = null!;
+
+    [Parameter]
+    public EventCallback OnClick { get; set; }
+}

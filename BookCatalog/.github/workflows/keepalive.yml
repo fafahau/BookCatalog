@@ -1,0 +1,19 @@
+name: Supabase keep-alive
+
+# Free-tier Supabase projects pause after 7 days without any request.
+# This pings the REST API every 3 days so the project never goes idle (brief 4.4).
+on:
+  schedule:
+    - cron: "0 6 */3 * *"
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Query collections count
+        run: |
+          curl --fail --silent --show-error \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
+            "${{ secrets.SUPABASE_URL }}/rest/v1/collections?select=id&limit=1"

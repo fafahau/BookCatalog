@@ -1,0 +1,150 @@
+-- BookCatalog — schema, RLS policies, auto-profile trigger, storage bucket + policies.
+-- Run once in the Supabase dashboard: SQL Editor → New query → paste this whole file → Run.
+-- Safe to re-run: every statement is idempotent (IF NOT EXISTS / OR REPLACE / ON CONFLICT / DROP ... IF EXISTS).
+
+-- ============================================================
+-- 1. Tables
+-- ============================================================
+
+create table if not exists public.profiles (
+    id           uuid primary key references auth.users (id) on delete cascade,
+    display_name text,
+    role         text not null default 'readonly' check (role in ('admin', 'readonly')),
+    created_at   timestamptz not null default now()
+);
+
+create table if not exists public.collections (
+    id         uuid primary key default gen_random_uuid(),
+    name       text not null,
+    created_at timestamptz not null default now(),
+    created_by uuid references public.profiles (id) on delete set null
+);
+
+create table if not exists public.books (
+    id            uuid primary key default gen_random_uuid(),
+    title         text not null,
+    author        text not null,
+    isbn          text,
+    collection_id uuid not null references public.collections (id) on delete cascade,
+    photo_url_1   text,
+    photo_url_2   text,
+    created_at    timestamptz not null default now(),
+    created_by    uuid references public.profiles (id) on delete set null
+);
+
+create index if not exists books_collection_id_idx on public.books (collection_id);
+
+-- ============================================================
+-- 2. Auto-create a profile row whenever a new auth user signs up
+--    (default role 'readonly' — an admin promotes manually afterwards).
+-- ============================================================
+
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+    insert into public.profiles (id, display_name, role)
+    values (new.id, new.raw_user_meta_data ->> 'display_name', 'readonly');
+    return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+    after insert on auth.users
+    for each row execute procedure public.handle_new_user();
+
+-- ============================================================
+-- 3. Helper: is the current authenticated user an admin?
+--    SECURITY DEFINER so it can read profiles regardless of the caller's
+--    own RLS visibility, avoiding any recursive-policy edge cases.
+-- ============================================================
+
+create or replace function public.is_admin()
+returns boolean
+language sql
+security definer
+set search_path = public
+stable
+as $$
+    select exists (
+        select 1 from public.profiles
+        where id = auth.uid() and role = 'admin'
+    );
+$$;
+
+-- ============================================================
+-- 4. Row Level Security (brief 4.5)
+-- ============================================================
+
+alter table public.profiles enable row level security;
+alter table public.collections enable row level security;
+alter table public.books enable row level security;
+
+-- profiles: everyone can read their own row (needed to know their own role);
+-- admins can read/update/delete every row (Users.razor).
+drop policy if exists profiles_select on public.profiles;
+create policy profiles_select on public.profiles
+    for select using (id = auth.uid() or public.is_admin());
+
+drop policy if exists profiles_admin_update on public.profiles;
+create policy profiles_admin_update on public.profiles
+    for update using (public.is_admin()) with check (public.is_admin());
+
+drop policy if exists profiles_admin_delete on public.profiles;
+create policy profiles_admin_delete on public.profiles
+    for delete using (public.is_admin());
+
+-- collections: any signed-in user with a profile can read;
+-- only admins can create/rename/delete.
+drop policy if exists collections_select on public.collections;
+create policy collections_select on public.collections
+    for select using (exists (select 1 from public.profiles where id = auth.uid()));
+
+drop policy if exists collections_admin_write on public.collections;
+create policy collections_admin_write on public.collections
+    for all using (public.is_admin()) with check (public.is_admin());
+
+-- books: same shape as collections.
+drop policy if exists books_select on public.books;
+create policy books_select on public.books
+    for select using (exists (select 1 from public.profiles where id = auth.uid()));
+
+drop policy if exists books_admin_write on public.books;
+create policy books_admin_write on public.books
+    for all using (public.is_admin()) with check (public.is_admin());
+
+-- ============================================================
+-- 5. Storage bucket + policies (brief 4.2 / 4.3 / 4.5)
+--
+-- The bucket is public so photo_url_1/2 can be plain public URLs rendered
+-- directly in <img> tags (brief 4.2 explicitly stores "l'URL publique").
+-- Note: Supabase's public-read route bypasses RLS by design - the SELECT
+-- policy below only matters for authenticated listing via the REST API.
+-- INSERT/UPDATE/DELETE always go through RLS regardless of the public flag,
+-- so uploads/deletes stay admin-only either way.
+-- ============================================================
+
+insert into storage.buckets (id, name, public)
+values ('book-photos', 'book-photos', true)
+on conflict (id) do update set public = true;
+
+drop policy if exists book_photos_select on storage.objects;
+create policy book_photos_select on storage.objects
+    for select using (
+        bucket_id = 'book-photos'
+        and exists (select 1 from public.profiles where id = auth.uid())
+    );
+
+drop policy if exists book_photos_admin_write on storage.objects;
+create policy book_photos_admin_write on storage.objects
+    for all using (bucket_id = 'book-photos' and public.is_admin())
+    with check (bucket_id = 'book-photos' and public.is_admin());
+
+-- ============================================================
+-- 6. Bootstrap: promote the first user to admin manually, e.g.:
+--   update public.profiles set role = 'admin' where id = '<uuid from auth.users>';
+-- ============================================================

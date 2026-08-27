@@ -1,0 +1,147 @@
+@page "/collection/{Id:guid}"
+@attribute [Authorize]
+@inject CollectionService CollectionService
+@inject BookService BookService
+@inject AuthService AuthService
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<PageTitle>@(_collection?.Name ?? "Collection")</PageTitle>
+
+@if (_loading)
+{
+    <p>Chargement...</p>
+}
+else if (_collection == null)
+{
+    <p>Collection introuvable.</p>
+}
+else
+{
+    <div class="page-header">
+        <a class="back-link" href="/">&larr; Collections</a>
+        <h1>@_collection.Name</h1>
+    </div>
+
+    <div class="filters">
+        <input placeholder="Filtrer par titre" @bind="_filter.Title" @bind:event="oninput" @onkeyup="ReloadBooksAsync"/>
+        <input placeholder="Filtrer par auteur" @bind="_filter.Author" @bind:event="oninput" @onkeyup="ReloadBooksAsync"/>
+        <label class="date-filter">
+            Ajouté depuis
+            <input type="date" @bind="_createdFrom" @bind:event="oninput" @onchange="ReloadBooksAsync"/>
+        </label>
+        <label class="date-filter">
+            jusqu'au
+            <input type="date" @bind="_createdTo" @bind:event="oninput" @onchange="ReloadBooksAsync"/>
+        </label>
+
+        <div class="view-toggle">
+            <button class="@(_viewMode == ViewMode.List ? "active" : "")" @onclick='() => SetViewMode(ViewMode.List)'>☰ Liste</button>
+            <button class="@(_viewMode == ViewMode.Tile ? "active" : "")" @onclick='() => SetViewMode(ViewMode.Tile)'>▦ Tuiles</button>
+        </div>
+    </div>
+
+    <AuthorizeView Roles="admin" Context="adminContext">
+        <Authorized>
+            <button class="primary add-book" @onclick="AddBook">+ Ajouter un livre</button>
+        </Authorized>
+    </AuthorizeView>
+
+    @if (_booksLoading)
+    {
+        <p>Chargement des livres...</p>
+    }
+    else if (!_books.Any())
+    {
+        <p class="empty-state">Aucun livre ne correspond.</p>
+    }
+    else if (_viewMode == ViewMode.List)
+    {
+        <ul class="book-list">
+            @foreach (var book in _books)
+            {
+                <li class="book-row">
+                    <BookListItem Book="book" OnClick="() => OpenBook(book)"/>
+                    <AuthorizeView Roles="admin" Context="rowAdminContext">
+                        <Authorized>
+                            <button class="icon-button danger" title="Supprimer" @onclick="() => DeleteBookAsync(book)">🗑</button>
+                        </Authorized>
+                    </AuthorizeView>
+                </li>
+            }
+        </ul>
+    }
+    else
+    {
+        <div class="book-tile-grid">
+            @foreach (var book in _books)
+            {
+                <div class="book-tile-wrapper">
+                    <BookTile Book="book" OnClick="() => OpenBook(book)"/>
+                    <AuthorizeView Roles="admin" Context="tileAdminContext">
+                        <Authorized>
+                            <button class="icon-button danger tile-delete" title="Supprimer" @onclick="() => DeleteBookAsync(book)">🗑</button>
+                        </Authorized>
+                    </AuthorizeView>
+                </div>
+            }
+        </div>
+    }
+}
+
+@code {
+    private enum ViewMode { List, Tile }
+
+    [Parameter]
+    public Guid Id { get; set; }
+
+    private BookCollection? _collection;
+    private List<Book> _books = new();
+    private bool _loading = true;
+    private bool _booksLoading = true;
+    private ViewMode _viewMode = ViewMode.List;
+    private readonly BookFilter _filter = new();
+    private DateTime? _createdFrom;
+    private DateTime? _createdTo;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _collection = await CollectionService.GetByIdAsync(Id);
+        _loading = false;
+        await ReloadBooksAsync();
+    }
+
+    private void SetViewMode(ViewMode mode) => _viewMode = mode;
+
+    private async Task ReloadBooksAsync()
+    {
+        _booksLoading = true;
+        _filter.CreatedFrom = _createdFrom;
+        _filter.CreatedTo = _createdTo?.AddDays(1).AddTicks(-1);
+        _books = await BookService.GetByCollectionAsync(Id, _filter);
+        _booksLoading = false;
+        StateHasChanged();
+    }
+
+    private void AddBook() => Navigation.NavigateTo($"/collection/{Id}/book/new");
+
+    private void OpenBook(Book book)
+    {
+        if (AuthService.IsAdmin)
+        {
+            Navigation.NavigateTo($"/book/{book.Id}/edit");
+        }
+    }
+
+    private async Task DeleteBookAsync(Book book)
+    {
+        var confirmed = await JS.InvokeAsync<bool>("confirm", $"Supprimer \"{book.Title}\" ?");
+        if (!confirmed)
+        {
+            return;
+        }
+
+        await BookService.DeleteAsync(book);
+        await ReloadBooksAsync();
+    }
+}

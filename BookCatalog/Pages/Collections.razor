@@ -1,0 +1,126 @@
+@page "/"
+@attribute [Authorize]
+@inject CollectionService CollectionService
+@inject AuthService AuthService
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<PageTitle>Collections</PageTitle>
+
+<h1>Collections</h1>
+
+@if (_loading)
+{
+    <p>Chargement...</p>
+}
+else
+{
+    <AuthorizeView Roles="admin" Context="adminContext">
+        <Authorized>
+            <div class="new-collection">
+                <input @bind="_newCollectionName" @bind:event="oninput" placeholder="Nom de la nouvelle collection"/>
+                <button class="primary" @onclick="CreateAsync" disabled="@string.IsNullOrWhiteSpace(_newCollectionName)">Ajouter</button>
+            </div>
+        </Authorized>
+    </AuthorizeView>
+
+    @if (!_collections.Any())
+    {
+        <p class="empty-state">Aucune collection pour l'instant.</p>
+    }
+    else
+    {
+        <ul class="collection-list">
+            @foreach (var collection in _collections)
+            {
+                <li class="collection-row">
+                    @if (_editingId == collection.Id)
+                    {
+                        <input @bind="_editingName" @bind:event="oninput"/>
+                        <button class="icon-button" title="Enregistrer" @onclick="() => SaveRenameAsync(collection.Id)">✔</button>
+                        <button class="icon-button" title="Annuler" @onclick="CancelRename">✕</button>
+                    }
+                    else
+                    {
+                        <a class="collection-name" href="@($"/collection/{collection.Id}")">@collection.Name</a>
+                        <AuthorizeView Roles="admin" Context="rowAdminContext">
+                            <Authorized>
+                                <button class="icon-button" title="Renommer" @onclick="() => StartRename(collection)">✎</button>
+                                <button class="icon-button danger" title="Supprimer" @onclick="() => DeleteAsync(collection)">🗑</button>
+                            </Authorized>
+                        </AuthorizeView>
+                    }
+                </li>
+            }
+        </ul>
+    }
+}
+
+@code {
+    private List<BookCollection> _collections = new();
+    private bool _loading = true;
+    private string _newCollectionName = string.Empty;
+    private Guid? _editingId;
+    private string _editingName = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await ReloadAsync();
+    }
+
+    private async Task ReloadAsync()
+    {
+        _loading = true;
+        _collections = await CollectionService.GetAllAsync();
+        _loading = false;
+    }
+
+    private async Task CreateAsync()
+    {
+        var name = _newCollectionName.Trim();
+        if (string.IsNullOrWhiteSpace(name) || AuthService.CurrentUserId == null)
+        {
+            return;
+        }
+
+        await CollectionService.CreateAsync(name, AuthService.CurrentUserId.Value);
+        _newCollectionName = string.Empty;
+        await ReloadAsync();
+    }
+
+    private void StartRename(BookCollection collection)
+    {
+        _editingId = collection.Id;
+        _editingName = collection.Name;
+    }
+
+    private void CancelRename()
+    {
+        _editingId = null;
+        _editingName = string.Empty;
+    }
+
+    private async Task SaveRenameAsync(Guid id)
+    {
+        var name = _editingName.Trim();
+        if (!string.IsNullOrWhiteSpace(name))
+        {
+            await CollectionService.RenameAsync(id, name);
+        }
+
+        CancelRename();
+        await ReloadAsync();
+    }
+
+    private async Task DeleteAsync(BookCollection collection)
+    {
+        var confirmed = await JS.InvokeAsync<bool>("confirm", $"Supprimer la collection \"{collection.Name}\" et tous ses livres ?");
+        if (!confirmed)
+        {
+            return;
+        }
+
+        await CollectionService.DeleteAsync(collection.Id);
+        await ReloadAsync();
+    }
+}

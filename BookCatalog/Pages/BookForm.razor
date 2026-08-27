@@ -1,0 +1,260 @@
+@page "/collection/{CollectionId:guid}/book/new"
+@page "/book/{Id:guid}/edit"
+@attribute [Authorize(Roles = "admin")]
+@inject BookService BookService
+@inject CollectionService CollectionService
+@inject IsbnLookupService IsbnLookupService
+@inject ImageUploadService ImageUploadService
+@inject AuthService AuthService
+@inject NavigationManager Navigation
+
+<PageTitle>@(_isEdit ? "Modifier le livre" : "Nouveau livre")</PageTitle>
+
+@if (_loading)
+{
+    <p>Chargement...</p>
+}
+else
+{
+    <div class="page-header">
+        <a class="back-link" href="@BackHref">&larr; Retour</a>
+        <h1>@(_isEdit ? "Modifier le livre" : "Nouveau livre") @(_collection != null ? $"— {_collection.Name}" : "")</h1>
+    </div>
+
+    <div class="isbn-lookup">
+        <input placeholder="ISBN (optionnel)" @bind="_isbn" @bind:event="oninput"/>
+        <button type="button" @onclick="LookupIsbnAsync" disabled="@(_isbnLookupBusy || string.IsNullOrWhiteSpace(_isbn))">
+            @(_isbnLookupBusy ? "Recherche..." : "Rechercher")
+        </button>
+    </div>
+    @if (!string.IsNullOrEmpty(_isbnMessage))
+    {
+        <p class="form-info">@_isbnMessage</p>
+    }
+
+    <EditForm Model="this" OnValidSubmit="SaveAsync">
+        <label>
+            Titre
+            <input required @bind="_title" @bind:event="oninput"/>
+        </label>
+        <label>
+            Auteur
+            <input required @bind="_author" @bind:event="oninput"/>
+        </label>
+
+        <div class="photo-inputs">
+            <div class="photo-input">
+                <span>Photo 1</span>
+                @if (!string.IsNullOrEmpty(_photo1Preview))
+                {
+                    <img class="photo-preview" src="@_photo1Preview" alt=""/>
+                }
+                <input type="file" accept="image/*" @ref="_photo1InputRef" @onchange="() => OnPhotoSelectedAsync(1)"/>
+            </div>
+            <div class="photo-input">
+                <span>Photo 2</span>
+                @if (!string.IsNullOrEmpty(_photo2Preview))
+                {
+                    <img class="photo-preview" src="@_photo2Preview" alt=""/>
+                }
+                <input type="file" accept="image/*" @ref="_photo2InputRef" @onchange="() => OnPhotoSelectedAsync(2)"/>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrEmpty(_error))
+        {
+            <p class="form-error">@_error</p>
+        }
+
+        <button type="submit" class="primary" disabled="@_saving">@(_saving ? "Enregistrement..." : "Enregistrer")</button>
+    </EditForm>
+}
+
+@code {
+    [Parameter]
+    public Guid CollectionId { get; set; }
+
+    [Parameter]
+    public Guid Id { get; set; }
+
+    private bool _isEdit => Id != Guid.Empty;
+    private string BackHref => _collection != null ? $"/collection/{_collection.Id}" : "/";
+
+    private bool _loading = true;
+    private bool _saving;
+    private bool _isbnLookupBusy;
+    private string? _error;
+    private string? _isbnMessage;
+
+    private BookCollection? _collection;
+    private Book? _existingBook;
+
+    private string _title = string.Empty;
+    private string _author = string.Empty;
+    private string _isbn = string.Empty;
+
+    private ElementReference _photo1InputRef;
+    private ElementReference _photo2InputRef;
+    private byte[]? _photo1PendingBytes;
+    private byte[]? _photo2PendingBytes;
+    private string? _photo1Preview;
+    private string? _photo2Preview;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (_isEdit)
+        {
+            _existingBook = await BookService.GetByIdAsync(Id);
+            if (_existingBook != null)
+            {
+                _title = _existingBook.Title;
+                _author = _existingBook.Author;
+                _isbn = _existingBook.Isbn ?? string.Empty;
+                _photo1Preview = _existingBook.PhotoUrl1;
+                _photo2Preview = _existingBook.PhotoUrl2;
+                _collection = await CollectionService.GetByIdAsync(_existingBook.CollectionId);
+            }
+        }
+        else
+        {
+            _collection = await CollectionService.GetByIdAsync(CollectionId);
+        }
+
+        _loading = false;
+    }
+
+    private async Task LookupIsbnAsync()
+    {
+        _isbnLookupBusy = true;
+        _isbnMessage = null;
+        var result = await IsbnLookupService.LookupAsync(_isbn);
+        _isbnLookupBusy = false;
+
+        if (result == null)
+        {
+            _isbnMessage = "Aucune information trouvée pour cet ISBN. Saisie manuelle possible.";
+            return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(result.Title))
+        {
+            _title = result.Title!;
+        }
+        if (!string.IsNullOrWhiteSpace(result.Author))
+        {
+            _author = result.Author!;
+        }
+
+        if (!string.IsNullOrWhiteSpace(result.CoverUrl) && _photo1PendingBytes == null)
+        {
+            var bytes = await ImageUploadService.CompressFromUrlAsync(result.CoverUrl!);
+            if (bytes != null)
+            {
+                _photo1PendingBytes = bytes;
+                _photo1Preview = ToDataUrl(bytes);
+            }
+            else
+            {
+                _isbnMessage = "Titre/auteur pré-remplis. La couverture n'a pas pu être récupérée automatiquement.";
+            }
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task OnPhotoSelectedAsync(int slot)
+    {
+        var elementRef = slot == 1 ? _photo1InputRef : _photo2InputRef;
+        var bytes = await ImageUploadService.CompressFromInputElementAsync(elementRef);
+        if (bytes == null)
+        {
+            return;
+        }
+
+        var dataUrl = ToDataUrl(bytes);
+        if (slot == 1)
+        {
+            _photo1PendingBytes = bytes;
+            _photo1Preview = dataUrl;
+        }
+        else
+        {
+            _photo2PendingBytes = bytes;
+            _photo2Preview = dataUrl;
+        }
+    }
+
+    private static string ToDataUrl(byte[] jpegBytes) => $"data:image/jpeg;base64,{Convert.ToBase64String(jpegBytes)}";
+
+    private async Task SaveAsync()
+    {
+        _saving = true;
+        _error = null;
+
+        try
+        {
+            Guid bookId;
+            Guid collectionId;
+
+            if (_isEdit && _existingBook != null)
+            {
+                bookId = _existingBook.Id;
+                collectionId = _existingBook.CollectionId;
+
+                _existingBook.Title = _title.Trim();
+                _existingBook.Author = _author.Trim();
+                _existingBook.Isbn = string.IsNullOrWhiteSpace(_isbn) ? null : _isbn.Trim();
+
+                if (_photo1PendingBytes != null)
+                {
+                    _existingBook.PhotoUrl1 = await ImageUploadService.UploadPhotoAsync(collectionId, bookId, 1, _photo1PendingBytes);
+                }
+                if (_photo2PendingBytes != null)
+                {
+                    _existingBook.PhotoUrl2 = await ImageUploadService.UploadPhotoAsync(collectionId, bookId, 2, _photo2PendingBytes);
+                }
+
+                await BookService.UpdateAsync(_existingBook);
+            }
+            else
+            {
+                collectionId = CollectionId;
+                var newBook = new Book
+                {
+                    Title = _title.Trim(),
+                    Author = _author.Trim(),
+                    Isbn = string.IsNullOrWhiteSpace(_isbn) ? null : _isbn.Trim(),
+                    CollectionId = collectionId,
+                    CreatedBy = AuthService.CurrentUserId
+                };
+
+                var created = await BookService.CreateAsync(newBook);
+                bookId = created.Id;
+
+                if (_photo1PendingBytes != null)
+                {
+                    created.PhotoUrl1 = await ImageUploadService.UploadPhotoAsync(collectionId, bookId, 1, _photo1PendingBytes);
+                }
+                if (_photo2PendingBytes != null)
+                {
+                    created.PhotoUrl2 = await ImageUploadService.UploadPhotoAsync(collectionId, bookId, 2, _photo2PendingBytes);
+                }
+
+                if (_photo1PendingBytes != null || _photo2PendingBytes != null)
+                {
+                    await BookService.UpdateAsync(created);
+                }
+            }
+
+            Navigation.NavigateTo($"/collection/{collectionId}");
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+}

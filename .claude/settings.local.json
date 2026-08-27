@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(dotnet --version; git --version)",
+      "PowerShell(dotnet new list blazor 2>&1 | Out-String; Write-Host \"---WORKLOADS---\"; dotnet workload list 2>&1 | Out-String)",
+      "PowerShell(Get-ChildItem -Recurse -File C:\\\\dev\\\\Livres\\\\BookCatalog | Select-Object -ExpandProperty FullName | ForEach-Object { $_.Replace\\(\"C:\\\\dev\\\\Livres\\\\BookCatalog\\\\\",\"\"\\) })",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:api.github.com)",
+      "PowerShell(dotnet run *)",
+      "PowerShell(try { \\(Invoke-WebRequest -Uri http://localhost:5299/login -UseBasicParsing -TimeoutSec 10\\).StatusCode } catch { $_.Exception.Message })"
+    ]
+  }
+}

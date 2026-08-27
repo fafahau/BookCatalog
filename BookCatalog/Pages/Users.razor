@@ -1,0 +1,69 @@
+@page "/users"
+@attribute [Authorize(Roles = "admin")]
+@inject UserService UserService
+@inject AuthService AuthService
+@inject IJSRuntime JS
+
+<PageTitle>Utilisateurs</PageTitle>
+
+<h1>Utilisateurs</h1>
+
+@if (_loading)
+{
+    <p>Chargement...</p>
+}
+else
+{
+    <ul class="user-list">
+        @foreach (var profile in _profiles)
+        {
+            <li class="user-row">
+                <div class="user-info">
+                    <div class="user-name">@(string.IsNullOrWhiteSpace(profile.DisplayName) ? "(sans nom)" : profile.DisplayName)</div>
+                    <div class="user-id">@profile.Id</div>
+                </div>
+                <select value="@profile.Role" @onchange="e => ChangeRoleAsync(profile, (string)e.Value!)" disabled="@(profile.Id == AuthService.CurrentUserId)">
+                    <option value="admin">admin</option>
+                    <option value="readonly">readonly</option>
+                </select>
+                <button class="icon-button danger" title="Retirer" disabled="@(profile.Id == AuthService.CurrentUserId)" @onclick="() => RemoveAsync(profile)">🗑</button>
+            </li>
+        }
+    </ul>
+    <p class="hint">« Retirer » révoque l'accès au catalogue (suppression du profil). Pour supprimer complètement un compte, utilisez le tableau de bord Supabase.</p>
+}
+
+@code {
+    private List<Profile> _profiles = new();
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await ReloadAsync();
+    }
+
+    private async Task ReloadAsync()
+    {
+        _loading = true;
+        _profiles = await UserService.GetAllAsync();
+        _loading = false;
+    }
+
+    private async Task ChangeRoleAsync(Profile profile, string role)
+    {
+        await UserService.SetRoleAsync(profile.Id, role);
+        await ReloadAsync();
+    }
+
+    private async Task RemoveAsync(Profile profile)
+    {
+        var confirmed = await JS.InvokeAsync<bool>("confirm", $"Retirer l'accès de {(string.IsNullOrWhiteSpace(profile.DisplayName) ? profile.Id.ToString() : profile.DisplayName)} ?");
+        if (!confirmed)
+        {
+            return;
+        }
+
+        await UserService.RemoveAsync(profile.Id);
+        await ReloadAsync();
+    }
+}

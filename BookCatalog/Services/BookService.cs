@@ -1,0 +1,81 @@
+using BookCatalog.Models;
+using Supabase.Postgrest;
+
+namespace BookCatalog.Services;
+
+public class BookFilter
+{
+    public string? Title { get; set; }
+    public string? Author { get; set; }
+    public DateTime? CreatedFrom { get; set; }
+    public DateTime? CreatedTo { get; set; }
+}
+
+public class BookService
+{
+    private readonly Supabase.Client _client;
+    private readonly ImageUploadService _imageUploadService;
+
+    public BookService(SupabaseService supabaseService, ImageUploadService imageUploadService)
+    {
+        _client = supabaseService.Client;
+        _imageUploadService = imageUploadService;
+    }
+
+    public async Task<List<Book>> GetByCollectionAsync(Guid collectionId, BookFilter? filter = null)
+    {
+        var query = _client.From<Book>()
+            .Filter("collection_id", Constants.Operator.Equals, collectionId.ToString());
+
+        if (!string.IsNullOrWhiteSpace(filter?.Title))
+        {
+            query = query.Filter("title", Constants.Operator.ILike, $"%{filter.Title}%");
+        }
+
+        if (!string.IsNullOrWhiteSpace(filter?.Author))
+        {
+            query = query.Filter("author", Constants.Operator.ILike, $"%{filter.Author}%");
+        }
+
+        if (filter?.CreatedFrom != null)
+        {
+            query = query.Filter("created_at", Constants.Operator.GreaterThanOrEqual, filter.CreatedFrom.Value.ToString("O"));
+        }
+
+        if (filter?.CreatedTo != null)
+        {
+            query = query.Filter("created_at", Constants.Operator.LessThanOrEqual, filter.CreatedTo.Value.ToString("O"));
+        }
+
+        var result = await query.Order("created_at", Constants.Ordering.Descending).Get();
+        return result.Models;
+    }
+
+    public async Task<Book?> GetByIdAsync(Guid id)
+    {
+        return await _client.From<Book>()
+            .Filter("id", Constants.Operator.Equals, id.ToString())
+            .Single();
+    }
+
+    public async Task<Book> CreateAsync(Book book)
+    {
+        var result = await _client.From<Book>().Insert(book);
+        return result.Models.First();
+    }
+
+    public async Task UpdateAsync(Book book)
+    {
+        await _client.From<Book>()
+            .Filter("id", Constants.Operator.Equals, book.Id.ToString())
+            .Update(book);
+    }
+
+    public async Task DeleteAsync(Book book)
+    {
+        await _imageUploadService.DeleteBookPhotosAsync(book.CollectionId, book.Id);
+        await _client.From<Book>()
+            .Filter("id", Constants.Operator.Equals, book.Id.ToString())
+            .Delete();
+    }
+}
