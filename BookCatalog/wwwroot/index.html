@@ -31,11 +31,78 @@
         <a href="." class="reload">Reload</a>
         <span class="dismiss">🗙</span>
     </div>
+
+    <div id="pwa-update-ui" hidden>
+        <span>Une nouvelle version est disponible.</span>
+        <button type="button" id="pwa-update-reload">Mettre à jour</button>
+        <button type="button" id="pwa-update-dismiss" aria-label="Ignorer">🗙</button>
+    </div>
+
     <script src="js/imageTools.js"></script>
     <script src="js/imageCropper.js"></script>
     <script src="js/barcodeScanner.js"></script>
     <script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>
-    <script>navigator.serviceWorker.register('service-worker.js', { updateViaCache: 'none' });</script>
+    <script>
+        (function () {
+            if (!('serviceWorker' in navigator)) {
+                return;
+            }
+
+            navigator.serviceWorker.register('service-worker.js', { updateViaCache: 'none' }).then(registration => {
+                const banner = document.getElementById('pwa-update-ui');
+                const reloadButton = document.getElementById('pwa-update-reload');
+                const dismissButton = document.getElementById('pwa-update-dismiss');
+
+                function showBanner(worker) {
+                    if (!worker) {
+                        return;
+                    }
+                    banner.hidden = false;
+                    reloadButton.onclick = () => {
+                        reloadButton.disabled = true;
+                        worker.postMessage('skipWaiting');
+                    };
+                    dismissButton.onclick = () => { banner.hidden = true; };
+                }
+
+                // An update was already downloaded and is waiting from a previous visit.
+                if (registration.waiting && navigator.serviceWorker.controller) {
+                    showBanner(registration.waiting);
+                }
+
+                // A new worker started installing during this visit.
+                registration.addEventListener('updatefound', () => {
+                    const installing = registration.installing;
+                    if (!installing) {
+                        return;
+                    }
+                    installing.addEventListener('statechange', () => {
+                        if (installing.state === 'installed' && navigator.serviceWorker.controller) {
+                            showBanner(installing);
+                        }
+                    });
+                });
+
+                // The new worker took control: reload once to pick up the new assets.
+                let refreshing = false;
+                navigator.serviceWorker.addEventListener('controllerchange', () => {
+                    if (refreshing) {
+                        return;
+                    }
+                    refreshing = true;
+                    window.location.reload();
+                });
+
+                // Re-check for updates when the app regains focus, and hourly.
+                document.addEventListener('visibilitychange', () => {
+                    if (document.visibilityState === 'visible') {
+                        registration.update().catch(() => { });
+                    }
+                });
+                setInterval(() => registration.update().catch(() => { }), 60 * 60 * 1000);
+            });
+        })();
+    </script>
 </body>
 
 </html>
