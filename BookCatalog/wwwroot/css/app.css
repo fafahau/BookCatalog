@@ -259,10 +259,20 @@ label {
 }
 
 .topbar .brand {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
     font-weight: 700;
     text-decoration: none;
     color: var(--text);
     font-size: 1.1rem;
+}
+
+.topbar .brand-logo {
+    display: block;
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
 }
 
 .navmenu {
@@ -307,6 +317,20 @@ label {
 
 .auth-card h1 {
     text-align: center;
+}
+
+.auth-title {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.auth-title img {
+    display: block;
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
 }
 
 .switch-mode {
