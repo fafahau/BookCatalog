@@ -42,7 +42,7 @@ else
                     }
                     else
                     {
-                        <a class="collection-name" href="@($"/collection/{collection.Id}")">@collection.Name</a>
+                        <a class="collection-name" href="@($"collection/{collection.Id}")">@collection.Name</a>
                         <AuthorizeView Roles="admin" Context="rowAdminContext">
                             <Authorized>
                                 <button class="icon-button" title="Renommer" @onclick="() => StartRename(collection)">✎</button>

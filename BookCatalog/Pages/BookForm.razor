@@ -78,7 +78,7 @@ else
     public Guid Id { get; set; }
 
     private bool _isEdit => Id != Guid.Empty;
-    private string BackHref => _collection != null ? $"/collection/{_collection.Id}" : "/";
+    private string BackHref => _collection != null ? $"collection/{_collection.Id}" : "";
 
     private bool _loading = true;
     private bool _saving;
@@ -246,7 +246,7 @@ else
                 }
             }
 
-            Navigation.NavigateTo($"/collection/{collectionId}");
+            Navigation.NavigateTo($"collection/{collectionId}");
         }
         catch (Exception ex)
         {

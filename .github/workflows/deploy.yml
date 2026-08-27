@@ -27,9 +27,14 @@ jobs:
       - name: Publish
         run: dotnet publish BookCatalog/BookCatalog.csproj -c Release -o release
 
-      - name: Fix base href for a GitHub Pages project site
+      - name: Fix base href + service-worker base for a GitHub Pages project site
         run: |
-          sed -i "s|<base href=\"/\" />|<base href=\"/${{ github.event.repository.name }}/\" />|" release/wwwroot/index.html
+          set -e
+          BASE="/${{ github.event.repository.name }}/"
+          sed -i "s|<base href=\"/\" />|<base href=\"${BASE}\" />|" release/wwwroot/index.html
+          grep -q "<base href=\"${BASE}\" />" release/wwwroot/index.html \
+            || { echo "::error::base href was not rewritten to ${BASE} - check the <base> tag in wwwroot/index.html"; exit 1; }
+          sed -i "s|const base = \"/\";|const base = \"${BASE}\";|" release/wwwroot/service-worker.js
 
       - name: SPA fallback + disable Jekyll processing
         run: |

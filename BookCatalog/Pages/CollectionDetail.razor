@@ -19,7 +19,7 @@ else if (_collection == null)
 else
 {
     <div class="page-header">
-        <a class="back-link" href="/">&larr; Collections</a>
+        <a class="back-link" href="">&larr; Collections</a>
         <h1>@_collection.Name</h1>
     </div>
 
@@ -119,13 +119,13 @@ else
         StateHasChanged();
     }
 
-    private void AddBook() => Navigation.NavigateTo($"/collection/{Id}/book/new");
+    private void AddBook() => Navigation.NavigateTo($"collection/{Id}/book/new");
 
     private void OpenBook(Book book)
     {
         if (AuthService.IsAdmin)
         {
-            Navigation.NavigateTo($"/book/{book.Id}/edit");
+            Navigation.NavigateTo($"book/{book.Id}/edit");
         }
     }
 

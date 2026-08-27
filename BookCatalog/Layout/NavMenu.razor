@@ -4,13 +4,13 @@
 <AuthorizeView>
     <Authorized>
         <header class="topbar">
-            <a class="brand" href="/">📚 BookCatalog</a>
+            <a class="brand" href="">📚 BookCatalog</a>
         </header>
         <nav class="navmenu">
-            <NavLink class="nav-link" href="/" Match="NavLinkMatch.All">Collections</NavLink>
+            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">Collections</NavLink>
             <AuthorizeView Roles="admin" Context="adminContext">
                 <Authorized>
-                    <NavLink class="nav-link" href="/users">Utilisateurs</NavLink>
+                    <NavLink class="nav-link" href="users">Utilisateurs</NavLink>
                 </Authorized>
             </AuthorizeView>
             <button class="nav-link logout" @onclick="LogoutAsync">Déconnexion</button>
@@ -22,6 +22,6 @@
     private async Task LogoutAsync()
     {
         await AuthService.LogoutAsync();
-        Navigation.NavigateTo("/login");
+        Navigation.NavigateTo("login");
     }
 }
