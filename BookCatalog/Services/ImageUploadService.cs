@@ -35,6 +35,13 @@ public class ImageUploadService
         return await _js.InvokeAsync<byte[]?>("imageTools.compressFromUrl", url, MaxWidthPx, JpegQuality);
     }
 
+    /// <summary>Opens the crop modal on the given JPEG bytes. Returns the cropped/re-encoded JPEG, or null if the user cancels.</summary>
+    public async Task<byte[]?> CropAsync(byte[] jpegBytes)
+    {
+        var dataUrl = "data:image/jpeg;base64," + Convert.ToBase64String(jpegBytes);
+        return await _js.InvokeAsync<byte[]?>("imageCropper.open", dataUrl, MaxWidthPx, JpegQuality);
+    }
+
     private static string PathFor(Guid collectionId, Guid bookId, int slot) =>
         $"{collectionId}/{bookId}/photo{slot}.jpg";
 

@@ -308,11 +308,41 @@ label {
     text-decoration: none;
 }
 
+.filters-accordion {
+    margin: 0.75rem 0;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+}
+
+.filters-accordion > summary {
+    cursor: pointer;
+    padding: 0.55rem 0.75rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #444;
+    list-style: none;
+}
+
+.filters-accordion > summary::-webkit-details-marker {
+    display: none;
+}
+
+.filters-accordion > summary::before {
+    content: "▸";
+    display: inline-block;
+    margin-right: 0.5rem;
+    transition: transform 0.15s ease;
+}
+
+.filters-accordion[open] > summary::before {
+    transform: rotate(90deg);
+}
+
 .filters {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-    margin: 0.75rem 0;
+    padding: 0 0.75rem 0.75rem;
 }
 
 .filters input {
@@ -330,6 +360,14 @@ label {
     flex: 1;
 }
 
+.toolbar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin: 0.5rem 0 1rem;
+}
+
 .view-toggle {
     display: flex;
     gap: 0.25rem;
@@ -342,7 +380,7 @@ label {
 }
 
 .add-book {
-    margin: 0.5rem 0 1rem;
+    margin-left: auto;
 }
 
 /* Book list view */
@@ -438,6 +476,43 @@ label {
     margin-top: 0;
 }
 
+.isbn-loading {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.spinner {
+    display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent, #3b82f6);
+    border-radius: 50%;
+    animation: spinner-rotate 0.7s linear infinite;
+    flex-shrink: 0;
+}
+
+@keyframes spinner-rotate {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.barcode-scanner {
+    margin-bottom: 1rem;
+}
+
+.barcode-scanner video {
+    width: 100%;
+    max-width: 420px;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    background: #000;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+}
+
 .photo-inputs {
     display: flex;
     flex-wrap: wrap;
@@ -459,6 +534,98 @@ label {
     object-fit: cover;
     border-radius: 6px;
     border: 1px solid var(--border);
+}
+
+.photo-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.file-btn {
+    display: inline-flex;
+    align-items: center;
+    margin: 0;
+    padding: 0.5rem 0.9rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: #fff;
+    color: var(--text);
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+
+.file-btn input[type=file] {
+    display: none;
+}
+
+/* Crop modal (imageCropper.js) */
+
+.cropper-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    background: rgba(0, 0, 0, 0.9);
+    touch-action: none;
+    user-select: none;
+}
+
+.cropper-stage {
+    position: relative;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    padding: 0.5rem;
+}
+
+.cropper-img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    pointer-events: none;
+    -webkit-user-drag: none;
+}
+
+.cropper-box {
+    position: absolute;
+    box-sizing: border-box;
+    border: 1px solid #fff;
+    box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.5);
+    cursor: move;
+}
+
+.cropper-h {
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    background: #fff;
+    border-radius: 50%;
+}
+
+.cropper-h[data-h=nw] { left: -8px; top: -8px; cursor: nwse-resize; }
+.cropper-h[data-h=ne] { right: -8px; top: -8px; cursor: nesw-resize; }
+.cropper-h[data-h=sw] { left: -8px; bottom: -8px; cursor: nesw-resize; }
+.cropper-h[data-h=se] { right: -8px; bottom: -8px; cursor: nwse-resize; }
+.cropper-h[data-h=n] { left: calc(50% - 8px); top: -8px; cursor: ns-resize; }
+.cropper-h[data-h=s] { left: calc(50% - 8px); bottom: -8px; cursor: ns-resize; }
+.cropper-h[data-h=w] { left: -8px; top: calc(50% - 8px); cursor: ew-resize; }
+.cropper-h[data-h=e] { right: -8px; top: calc(50% - 8px); cursor: ew-resize; }
+
+.cropper-bar {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    background: #000;
+}
+
+.cropper-bar button {
+    min-width: 90px;
 }
 
 /* Users page */
@@ -515,9 +682,5 @@ label {
     .filters input {
         flex: 1;
         min-width: 160px;
-    }
-
-    .view-toggle {
-        margin-left: auto;
     }
 }

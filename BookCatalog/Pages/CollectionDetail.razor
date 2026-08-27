@@ -23,29 +23,34 @@ else
         <h1>@_collection.Name</h1>
     </div>
 
-    <div class="filters">
-        <input placeholder="Filtrer par titre" @bind="_filter.Title" @bind:event="oninput" @onkeyup="ReloadBooksAsync"/>
-        <input placeholder="Filtrer par auteur" @bind="_filter.Author" @bind:event="oninput" @onkeyup="ReloadBooksAsync"/>
-        <label class="sort-select">
-            Trier par
-            <select @bind="_filter.Sort" @bind:after="ReloadBooksAsync">
-                <option value="@BookSort.Recent">Plus récent</option>
-                <option value="@BookSort.TitleAsc">Titre (A → Z)</option>
-                <option value="@BookSort.TitleDesc">Titre (Z → A)</option>
-            </select>
-        </label>
+    <details class="filters-accordion">
+        <summary>Filtres</summary>
+        <div class="filters">
+            <input placeholder="Filtrer par titre" @bind="_filter.Title" @bind:event="oninput" @onkeyup="ReloadBooksAsync"/>
+            <input placeholder="Filtrer par auteur" @bind="_filter.Author" @bind:event="oninput" @onkeyup="ReloadBooksAsync"/>
+            <label class="sort-select">
+                Trier par
+                <select @bind="_filter.Sort" @bind:after="ReloadBooksAsync">
+                    <option value="@BookSort.Recent">Plus récent</option>
+                    <option value="@BookSort.TitleAsc">Titre (A → Z)</option>
+                    <option value="@BookSort.TitleDesc">Titre (Z → A)</option>
+                </select>
+            </label>
+        </div>
+    </details>
 
+    <div class="toolbar">
         <div class="view-toggle">
             <button class="@(_viewMode == ViewMode.List ? "active" : "")" @onclick='() => SetViewMode(ViewMode.List)'>☰ Liste</button>
             <button class="@(_viewMode == ViewMode.Tile ? "active" : "")" @onclick='() => SetViewMode(ViewMode.Tile)'>▦ Tuiles</button>
         </div>
-    </div>
 
-    <AuthorizeView Roles="admin" Context="adminContext">
-        <Authorized>
-            <button class="primary add-book" @onclick="AddBook">+ Ajouter un livre</button>
-        </Authorized>
-    </AuthorizeView>
+        <AuthorizeView Roles="admin" Context="adminContext">
+            <Authorized>
+                <button class="primary add-book" @onclick="AddBook">+ Ajouter un livre</button>
+            </Authorized>
+        </AuthorizeView>
+    </div>
 
     @if (_booksLoading)
     {

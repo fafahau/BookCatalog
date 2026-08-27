@@ -7,6 +7,8 @@
 @inject ImageUploadService ImageUploadService
 @inject AuthService AuthService
 @inject NavigationManager Navigation
+@inject IJSRuntime JS
+@implements IAsyncDisposable
 
 <PageTitle>@(_isEdit ? "Modifier le livre" : "Nouveau livre")</PageTitle>
 
@@ -26,7 +28,27 @@ else
         <button type="button" @onclick="LookupIsbnAsync" disabled="@(_isbnLookupBusy || string.IsNullOrWhiteSpace(_isbn))">
             @(_isbnLookupBusy ? "Recherche..." : "Rechercher")
         </button>
+        <button type="button" class="scan-toggle" @onclick="ToggleScanAsync" disabled="@_scanStarting">
+            @(_scanning ? "Fermer" : "Scanner")
+        </button>
     </div>
+
+    @if (_isbnLookupBusy)
+    {
+        <p class="form-info isbn-loading"><span class="spinner" aria-hidden="true"></span> Recherche des informations du livre…</p>
+    }
+
+    @if (_scanning)
+    {
+        <div class="barcode-scanner">
+            <video @ref="_scanVideo" muted autoplay playsinline></video>
+            <p class="form-info">Placez le code-barres ISBN dans le cadre.</p>
+        </div>
+    }
+    @if (!string.IsNullOrEmpty(_scanError))
+    {
+        <p class="form-error">@_scanError</p>
+    }
     @if (!string.IsNullOrEmpty(_isbnMessage))
     {
         <p class="form-info">@_isbnMessage</p>
@@ -49,7 +71,20 @@ else
                 {
                     <img class="photo-preview" src="@_photo1Preview" alt=""/>
                 }
-                <input type="file" accept="image/*" @ref="_photo1InputRef" @onchange="() => OnPhotoSelectedAsync(1)"/>
+                <div class="photo-actions">
+                    <label class="file-btn">
+                        <span>Fichier</span>
+                        <input type="file" accept="image/*" @ref="_photo1FileRef" @onchange="() => OnPhotoSelectedAsync(1, _photo1FileRef)"/>
+                    </label>
+                    <label class="file-btn">
+                        <span>📷 Photo</span>
+                        <input type="file" accept="image/*" capture="environment" @ref="_photo1CamRef" @onchange="() => OnPhotoSelectedAsync(1, _photo1CamRef)"/>
+                    </label>
+                    @if (!string.IsNullOrEmpty(_photo1Preview))
+                    {
+                        <button type="button" @onclick="() => CropAsync(1)">Recadrer</button>
+                    }
+                </div>
             </div>
             <div class="photo-input">
                 <span>Photo 2</span>
@@ -57,9 +92,27 @@ else
                 {
                     <img class="photo-preview" src="@_photo2Preview" alt=""/>
                 }
-                <input type="file" accept="image/*" @ref="_photo2InputRef" @onchange="() => OnPhotoSelectedAsync(2)"/>
+                <div class="photo-actions">
+                    <label class="file-btn">
+                        <span>Fichier</span>
+                        <input type="file" accept="image/*" @ref="_photo2FileRef" @onchange="() => OnPhotoSelectedAsync(2, _photo2FileRef)"/>
+                    </label>
+                    <label class="file-btn">
+                        <span>📷 Photo</span>
+                        <input type="file" accept="image/*" capture="environment" @ref="_photo2CamRef" @onchange="() => OnPhotoSelectedAsync(2, _photo2CamRef)"/>
+                    </label>
+                    @if (!string.IsNullOrEmpty(_photo2Preview))
+                    {
+                        <button type="button" @onclick="() => CropAsync(2)">Recadrer</button>
+                    }
+                </div>
             </div>
         </div>
+
+        @if (!string.IsNullOrEmpty(_cropMessage))
+        {
+            <p class="form-info">@_cropMessage</p>
+        }
 
         @if (!string.IsNullOrEmpty(_error))
         {
@@ -86,6 +139,12 @@ else
     private string? _error;
     private string? _isbnMessage;
 
+    private bool _scanning;
+    private bool _scanStarting;
+    private string? _scanError;
+    private ElementReference _scanVideo;
+    private DotNetObjectReference<BookForm>? _selfRef;
+
     private BookCollection? _collection;
     private Book? _existingBook;
 
@@ -93,8 +152,11 @@ else
     private string _author = string.Empty;
     private string _isbn = string.Empty;
 
-    private ElementReference _photo1InputRef;
-    private ElementReference _photo2InputRef;
+    private ElementReference _photo1FileRef;
+    private ElementReference _photo1CamRef;
+    private ElementReference _photo2FileRef;
+    private ElementReference _photo2CamRef;
+    private string? _cropMessage;
     private byte[]? _photo1PendingBytes;
     private byte[]? _photo2PendingBytes;
     private string? _photo1Preview;
@@ -102,6 +164,8 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        _selfRef = DotNetObjectReference.Create(this);
+
         if (_isEdit)
         {
             _existingBook = await BookService.GetByIdAsync(Id);
@@ -127,8 +191,17 @@ else
     {
         _isbnLookupBusy = true;
         _isbnMessage = null;
-        var result = await IsbnLookupService.LookupAsync(_isbn);
-        _isbnLookupBusy = false;
+        StateHasChanged();
+
+        IsbnLookupResult? result;
+        try
+        {
+            result = await IsbnLookupService.LookupAsync(_isbn);
+        }
+        finally
+        {
+            _isbnLookupBusy = false;
+        }
 
         if (result == null)
         {
@@ -162,15 +235,81 @@ else
         StateHasChanged();
     }
 
-    private async Task OnPhotoSelectedAsync(int slot)
+    private async Task ToggleScanAsync()
     {
-        var elementRef = slot == 1 ? _photo1InputRef : _photo2InputRef;
-        var bytes = await ImageUploadService.CompressFromInputElementAsync(elementRef);
+        if (_scanning)
+        {
+            await StopScanAsync();
+            return;
+        }
+
+        _scanError = null;
+        _scanning = true;
+        _scanStarting = true;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!_scanning || !_scanStarting)
+        {
+            return;
+        }
+
+        _scanStarting = false;
+        try
+        {
+            await JS.InvokeAsync<string>("barcodeScanner.start", _scanVideo, _selfRef);
+        }
+        catch (Exception ex)
+        {
+            _scanning = false;
+            _scanError = "Impossible d'accéder à la caméra : " + ex.Message;
+            StateHasChanged();
+        }
+    }
+
+    [JSInvokable]
+    public async Task OnBarcodeDetected(string code)
+    {
+        _isbn = code;
+        await StopScanAsync();
+        await LookupIsbnAsync();
+        StateHasChanged();
+    }
+
+    private async Task StopScanAsync()
+    {
+        _scanning = false;
+        _scanStarting = false;
+        try
+        {
+            await JS.InvokeVoidAsync("barcodeScanner.stop");
+        }
+        catch
+        {
+            // circuit already gone / script not loaded
+        }
+        StateHasChanged();
+    }
+
+    private async Task OnPhotoSelectedAsync(int slot, ElementReference input)
+    {
+        _cropMessage = null;
+        var bytes = await ImageUploadService.CompressFromInputElementAsync(input);
         if (bytes == null)
         {
             return;
         }
 
+        SetPhoto(slot, bytes);
+        StateHasChanged();
+
+        // Let the user crop the photo they just picked (they can skip with "Annuler").
+        await CropAsync(slot);
+    }
+
+    private void SetPhoto(int slot, byte[] bytes)
+    {
         var dataUrl = ToDataUrl(bytes);
         if (slot == 1)
         {
@@ -182,6 +321,35 @@ else
             _photo2PendingBytes = bytes;
             _photo2Preview = dataUrl;
         }
+    }
+
+    private async Task CropAsync(int slot)
+    {
+        _cropMessage = null;
+        var bytes = slot == 1 ? _photo1PendingBytes : _photo2PendingBytes;
+
+        // When editing an existing book the only copy may be the uploaded URL; pull it back down first.
+        if (bytes == null)
+        {
+            var url = slot == 1 ? _photo1Preview : _photo2Preview;
+            if (!string.IsNullOrEmpty(url))
+            {
+                bytes = await ImageUploadService.CompressFromUrlAsync(url);
+            }
+        }
+
+        if (bytes == null)
+        {
+            _cropMessage = "Impossible de charger cette image pour la recadrer.";
+            return;
+        }
+
+        var cropped = await ImageUploadService.CropAsync(bytes);
+        if (cropped != null)
+        {
+            SetPhoto(slot, cropped);
+        }
+        StateHasChanged();
     }
 
     private static string ToDataUrl(byte[] jpegBytes) => $"data:image/jpeg;base64,{Convert.ToBase64String(jpegBytes)}";
@@ -256,5 +424,18 @@ else
         {
             _saving = false;
         }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("barcodeScanner.stop");
+        }
+        catch
+        {
+            // circuit already gone
+        }
+        _selfRef?.Dispose();
     }
 }
