@@ -1,6 +1,6 @@
 {
-  "name": "BookCatalog",
-  "short_name": "BookCatalog",
+  "name": "Déjà Dans la Bibli",
+  "short_name": "Déjà Dans la Bibli",
   "description": "Catalogue familial des livres physiques, organisés en collections.",
   "id": "./",
   "start_url": "./",
