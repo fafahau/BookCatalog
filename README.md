@@ -16,26 +16,11 @@ The app is a pure client: Blazor WebAssembly talking straight to Supabase
 
 ## Features
 
-### Authentication & roles
-- Email/password sign-up and sign-in (Supabase Auth), "forgotten password"
-  flow with an emailed reset link handled by `Pages/ResetPassword.razor`.
-- Session persisted in `localStorage` and restored on startup.
-- Three roles, enforced by Postgres Row Level Security (client-side checks are
-  only for hiding UI):
-  - **readonly** — can browse collections, books, labels and search; no edits.
-  - **admin** — full CRUD on collections, books and labels, plus user
-    management.
-  - **superadmin** — same as admin, but a superadmin profile can't be removed
-    from the Users screen and only another superadmin can change its role.
-- A Postgres trigger auto-creates a `profiles` row (role `readonly`) on every
-  sign-up; the first user is promoted manually via SQL.
-
 ### Home
-- Tile launcher (`Pages/Home.razor`): Search, Collections, and — for admins —
-  Users and Labels.
+- Tile launcher (`Pages/Home.razor`): Search, Collections, Users and Labels.
 
 ### Collections
-- List, create, rename, delete (admin only). A book belongs to exactly one
+- List, create, rename, delete. A book belongs to exactly one
   collection; deleting a collection cascades to its books and their photos.
 - The collections list has a cross-collection ISBN quick-search box.
 
@@ -71,8 +56,8 @@ The app is a pure client: Blazor WebAssembly talking straight to Supabase
 ### Labels
 - Shared, case-insensitive tags with a many-to-many link to books
   (`book_labels`). Added from the book form.
-- Admin page (`/labels`) to rename or delete a label across every book that
-  carries it.
+- A dedicated page (`/labels`) to rename or delete a label across every book
+  that carries it.
 
 ### Theme
 - Light/dark palette driven by CSS custom properties. By default it follows the
@@ -96,7 +81,6 @@ The app is a pure client: Blazor WebAssembly talking straight to Supabase
 | Frontend     | Blazor WebAssembly, .NET 8, PWA template                        |
 | Backend      | Supabase — Postgres, Auth, Storage, auto REST API              |
 | Supabase SDK | `Supabase` NuGet package `1.1.1` (called from the browser)     |
-| Auth state   | `CustomAuthStateProvider` + `Microsoft.AspNetCore.Components.Authorization` |
 | Image ops    | Plain JS + `<canvas>` interop (no .NET imaging lib)            |
 | Barcode      | ZXing (`zxing-0.21.3.min.js`)                                  |
 | ISBN data    | BnF SRU, Open Library, Google Books                            |
@@ -105,7 +89,7 @@ The app is a pure client: Blazor WebAssembly talking straight to Supabase
 
 Supabase URL and anon/publishable key live in
 [`BookCatalog/wwwroot/appsettings.json`](BookCatalog/wwwroot/appsettings.json).
-The anon key is public by design; RLS on the server is the real barrier.
+The anon key is public by design.
 
 ---
 
@@ -124,9 +108,6 @@ BookCatalog/
     IsbnScanSearch.razor  ThemeToggle.razor
   Services/
     SupabaseService              client wrapper (singleton, DI)
-    AuthService                  login/logout, current profile, IsAdmin/IsSuperAdmin
-    CustomAuthStateProvider      bridges Supabase session to Blazor auth
-    LocalStorageSessionPersistence   session <-> localStorage (sync JS interop)
     CollectionService  BookService  LabelService  UserService
     IsbnLookupService            BnF / Open Library / Google Books merge
     ImageUploadService           compress + upload + delete
@@ -166,10 +147,7 @@ book_labels                              -- many-to-many
   unique (book_id, label_id)
 ```
 
-RLS: any user with a profile can `SELECT` collections / books / labels;
-`INSERT/UPDATE/DELETE` on those tables and on Storage objects require
-`is_admin()`. `profiles` rows are readable by their owner and by admins;
-superadmin rows are protected as described above. Full script and policies:
+Full schema, trigger and Storage bucket setup:
 [`BookCatalog/sql/schema.sql`](BookCatalog/sql/schema.sql).
 
 ---
@@ -186,22 +164,17 @@ Open the printed URL (e.g. `https://localhost:7xxx`). To exercise the PWA /
 service worker, publish first (`dotnet publish -c Release`) and serve the static
 output — the service worker is inactive in Debug.
 
-First-time Supabase setup (run `sql/schema.sql`, configure Auth redirect URLs,
-promote the first user, GitHub Pages deployment, keep-alive secrets) is covered
-step by step in [`BookCatalog/README.md`](BookCatalog/README.md).
+First-time Supabase setup (run `sql/schema.sql`, GitHub Pages deployment,
+keep-alive secrets) is covered step by step in
+[`BookCatalog/README.md`](BookCatalog/README.md).
 
 ---
 
 ## Known limitations
 
-- **Deleting an account** — the Users page can only revoke access (delete the
-  `profiles` row). Fully deleting an `auth.users` account needs the
-  `service_role` key, which must never ship in a WASM client; do it from the
-  Supabase dashboard.
 - **Public Storage bucket** — `book-photos` is public so plain public URLs can
-  be stored and rendered directly. Write/delete stay admin-only via RLS, but
-  Supabase's public-read route bypasses RLS by design (acceptable for book
-  covers in a family app).
+  be stored and rendered directly in `<img>` tags (acceptable for book covers
+  in a family app).
 
 ## Out of scope (v2)
 
