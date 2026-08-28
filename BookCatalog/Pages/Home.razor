@@ -1,0 +1,29 @@
+@page "/"
+@attribute [Authorize]
+
+<PageTitle>Accueil</PageTitle>
+
+<h1>Déjà Dans la Bibli</h1>
+
+<div class="home-tiles">
+    <a class="home-tile" href="recherche">
+        <span class="home-tile-icon">🔍</span>
+        <span class="home-tile-label">Recherche</span>
+    </a>
+    <a class="home-tile" href="collections">
+        <span class="home-tile-icon">📚</span>
+        <span class="home-tile-label">Collections</span>
+    </a>
+    <AuthorizeView Roles="admin">
+        <Authorized>
+            <a class="home-tile" href="users">
+                <span class="home-tile-icon">👥</span>
+                <span class="home-tile-label">Utilisateurs</span>
+            </a>
+            <a class="home-tile" href="labels">
+                <span class="home-tile-icon">🏷️</span>
+                <span class="home-tile-label">Labels</span>
+            </a>
+        </Authorized>
+    </AuthorizeView>
+</div>

@@ -1,5 +1,15 @@
+@inject ImageViewerService ImageViewer
+
 <div class="book-list-item" @onclick="OnClick">
-    <img class="book-thumb" src="@(Book.PhotoUrl1 ?? "icon-192.png")" alt=""/>
+    @if (Book.PhotoUrl1 is { } cover)
+    {
+        <img class="book-thumb zoomable" src="@cover" alt=""
+             @onclick="() => ImageViewer.Show(cover)" @onclick:stopPropagation="true"/>
+    }
+    else
+    {
+        <img class="book-thumb" src="icon-192.png" alt=""/>
+    }
     <div class="book-info">
         <div class="book-title">@Book.Title</div>
         <div class="book-author">@Book.Author</div>

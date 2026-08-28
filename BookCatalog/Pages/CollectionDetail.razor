@@ -45,6 +45,35 @@ else
                 </select>
             </label>
         </div>
+
+        <div class="isbn-lookup-panel">
+            <IsbnScanSearch Searching="_isbnSearching" OnSearch="IsbnSearchAsync"
+                            Placeholder="Cet ISBN est-il déjà dans la collection ?"/>
+
+            @if (_isbnSearched)
+            {
+                @if (_isbnHere.Any())
+                {
+                    <p class="isbn-verdict found">✓ Déjà dans cette collection</p>
+                    <ul class="book-list">
+                        @foreach (var book in _isbnHere)
+                        {
+                            <li class="book-row">
+                                <BookListItem Book="book" OnClick="() => OpenBook(book)"/>
+                            </li>
+                        }
+                    </ul>
+                }
+                else
+                {
+                    <p class="isbn-verdict missing">✗ Pas dans cette collection</p>
+                    @if (_isbnElsewhere.Any())
+                    {
+                        <p class="isbn-elsewhere">Présent dans : @string.Join(", ", _isbnElsewhere)</p>
+                    }
+                }
+            }
+        </div>
     </details>
 
     <div class="toolbar">
@@ -116,6 +145,11 @@ else
     private readonly BookFilter _filter = new();
     private List<string> _allLabels = new();
 
+    private bool _isbnSearching;
+    private bool _isbnSearched;
+    private List<Book> _isbnHere = new();
+    private List<string> _isbnElsewhere = new();
+
     protected override async Task OnInitializedAsync()
     {
         _collection = await CollectionService.GetByIdAsync(Id);
@@ -141,6 +175,45 @@ else
         _books = await BookService.GetByCollectionAsync(Id, _filter);
         _booksLoading = false;
         StateHasChanged();
+    }
+
+    private async Task IsbnSearchAsync(string isbn)
+    {
+        _isbnSearching = true;
+        _isbnSearched = false;
+        StateHasChanged();
+        try
+        {
+            var matches = await BookService.SearchByIsbnAsync(isbn);
+            _isbnHere = matches.Where(b => b.CollectionId == Id).ToList();
+
+            var otherIds = matches
+                .Where(b => b.CollectionId != Id)
+                .Select(b => b.CollectionId)
+                .Distinct()
+                .ToList();
+
+            if (otherIds.Any())
+            {
+                var all = await CollectionService.GetAllAsync();
+                _isbnElsewhere = all
+                    .Where(c => otherIds.Contains(c.Id))
+                    .Select(c => c.Name)
+                    .OrderBy(n => n, StringComparer.CurrentCultureIgnoreCase)
+                    .ToList();
+            }
+            else
+            {
+                _isbnElsewhere = new();
+            }
+
+            _isbnSearched = true;
+        }
+        finally
+        {
+            _isbnSearching = false;
+            StateHasChanged();
+        }
     }
 
     private void AddBook() => Navigation.NavigateTo($"collection/{Id}/book/new");
