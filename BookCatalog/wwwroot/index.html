@@ -7,6 +7,28 @@
     <title>Déjà Dans la Bibli</title>
     <meta name="theme-color" content="#ffffff" />
     <base href="/" />
+    <script>
+        // Apply the saved theme before first paint so there's no flash.
+        // No stored choice => the CSS follows the device (prefers-color-scheme).
+        (function () {
+            var LIGHT = '#ffffff', DARK = '#16181c';
+            function applyMeta(choice) {
+                var m = document.querySelector('meta[name="theme-color"]');
+                if (!m) return;
+                var dark = choice === 'dark' || (choice !== 'light' &&
+                    window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+                m.setAttribute('content', dark ? DARK : LIGHT);
+            }
+            window.bookcatalogApplyThemeMeta = applyMeta;
+            try {
+                var choice = localStorage.getItem('bookcatalog.theme');
+                if (choice === 'dark' || choice === 'light') {
+                    document.documentElement.setAttribute('data-theme', choice);
+                }
+                applyMeta(choice);
+            } catch (e) { }
+        })();
+    </script>
     <link rel="preload" id="webassembly" />
     <link rel="stylesheet" href="css/app.css" />
     <!-- If you add any scoped CSS files, uncomment the following to load them
