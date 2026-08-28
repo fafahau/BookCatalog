@@ -1,3 +1,4 @@
+using Newtonsoft.Json;
 using Supabase.Postgrest.Attributes;
 using Supabase.Postgrest.Models;
 
@@ -17,6 +18,13 @@ public class Book : BaseModel
 
     [Column("isbn")]
     public string? Isbn { get; set; }
+
+    /// <summary>
+    /// Label names attached to this book, resolved from the <c>book_labels</c> join
+    /// by <see cref="Services.LabelService"/>. Not a column — never sent to the API.
+    /// </summary>
+    [JsonIgnore]
+    public List<string> LabelNames { get; set; } = new();
 
     [Column("collection_id")]
     public Guid CollectionId { get; set; }

@@ -3,6 +3,15 @@
     <div class="book-info">
         <div class="book-title">@Book.Title</div>
         <div class="book-author">@Book.Author</div>
+        @if (Book.LabelNames is { Count: > 0 })
+        {
+            <div class="book-labels">
+                @foreach (var label in Book.LabelNames)
+                {
+                    <span class="label-chip">@label</span>
+                }
+            </div>
+        }
     </div>
 </div>
 

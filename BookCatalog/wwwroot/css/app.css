@@ -569,6 +569,87 @@ label {
     border-radius: 50%;
 }
 
+/* Labels */
+
+.label-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.75rem;
+    line-height: 1.4;
+    padding: 0.1rem 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: #f4f4f4;
+    color: #444;
+}
+
+.book-labels {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    margin-top: 0.25rem;
+}
+
+.book-tile .book-labels {
+    justify-content: center;
+}
+
+.label-field > span {
+    display: block;
+    margin-bottom: 0.35rem;
+    font-size: 0.9rem;
+    color: #444;
+}
+
+.label-field {
+    margin-bottom: 0.85rem;
+}
+
+.label-editor {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    align-items: center;
+}
+
+.label-editor input {
+    flex: 1;
+    min-width: 8rem;
+    width: auto;
+    margin-top: 0;
+}
+
+.label-editor .label-chip button {
+    border: none;
+    background: none;
+    padding: 0;
+    font-size: 1rem;
+    line-height: 1;
+    color: #888;
+    cursor: pointer;
+}
+
+.label-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.label-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 0.2rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.label-row input {
+    flex: 1;
+    min-width: 0;
+    margin-top: 0;
+}
+
 /* Book form */
 
 .isbn-lookup {

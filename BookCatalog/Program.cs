@@ -18,6 +18,7 @@ builder.Services.AddSingleton<LocalStorageSessionPersistence>();
 builder.Services.AddSingleton<SupabaseService>();
 builder.Services.AddSingleton<AuthService>();
 builder.Services.AddSingleton<ImageUploadService>();
+builder.Services.AddSingleton<LabelService>();
 builder.Services.AddSingleton<BookService>();
 builder.Services.AddSingleton<CollectionService>();
 builder.Services.AddScoped<IsbnLookupService>();

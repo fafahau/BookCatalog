@@ -2,6 +2,7 @@
 @attribute [Authorize]
 @inject CollectionService CollectionService
 @inject BookService BookService
+@inject LabelService LabelService
 @inject AuthService AuthService
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
@@ -28,6 +29,13 @@ else
         <div class="filters">
             <input placeholder="Filtrer par titre" @bind="_filter.Title" @bind:event="oninput" @onkeyup="ReloadBooksAsync"/>
             <input placeholder="Filtrer par auteur" @bind="_filter.Author" @bind:event="oninput" @onkeyup="ReloadBooksAsync"/>
+            <input placeholder="Filtrer par label" list="collection-label-suggestions" @bind="_filter.Label" @bind:event="oninput" @onkeyup="ReloadBooksAsync"/>
+            <datalist id="collection-label-suggestions">
+                @foreach (var label in _allLabels)
+                {
+                    <option value="@label"/>
+                }
+            </datalist>
             <label class="sort-select">
                 Trier par
                 <select @bind="_filter.Sort" @bind:after="ReloadBooksAsync">
@@ -106,11 +114,22 @@ else
     private bool _booksLoading = true;
     private ViewMode _viewMode = ViewMode.List;
     private readonly BookFilter _filter = new();
+    private List<string> _allLabels = new();
 
     protected override async Task OnInitializedAsync()
     {
         _collection = await CollectionService.GetByIdAsync(Id);
         _loading = false;
+
+        try
+        {
+            _allLabels = await LabelService.GetNamesAsync();
+        }
+        catch
+        {
+            _allLabels = new();
+        }
+
         await ReloadBooksAsync();
     }
 

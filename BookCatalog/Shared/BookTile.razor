@@ -1,6 +1,15 @@
 <div class="book-tile" @onclick="OnClick">
     <img class="book-tile-img" src="@(Book.PhotoUrl1 ?? "icon-192.png")" alt=""/>
     <div class="book-tile-title">@Book.Title</div>
+    @if (Book.LabelNames is { Count: > 0 })
+    {
+        <div class="book-labels">
+            @foreach (var label in Book.LabelNames)
+            {
+                <span class="label-chip">@label</span>
+            }
+        </div>
+    }
 </div>
 
 @code {
