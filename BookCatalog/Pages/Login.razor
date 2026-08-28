@@ -22,7 +22,10 @@
             </label>
             <label>
                 Mot de passe
-                <InputText @bind-Value="_model.Password" type="password" autocomplete="current-password"/>
+                <div class="password-field">
+                    <InputText @bind-Value="_model.Password" type="@PasswordInputType" autocomplete="current-password"/>
+                    @PasswordToggleButton
+                </div>
             </label>
 
             @if (!string.IsNullOrEmpty(_error))
@@ -33,8 +36,35 @@
             <button type="submit" class="primary" disabled="@_busy">Se connecter</button>
         </EditForm>
         <p class="switch-mode">
+            <button class="link-button" @onclick="() => SwitchMode(Mode.ForgotPassword)">Mot de passe oublié ?</button>
+        </p>
+        <p class="switch-mode">
             Pas encore de compte ?
             <button class="link-button" @onclick="() => SwitchMode(Mode.Register)">Créer un compte</button>
+        </p>
+    }
+    else if (_mode == Mode.ForgotPassword)
+    {
+        <h2>Mot de passe oublié</h2>
+        <EditForm Model="_model" OnValidSubmit="SendResetAsync">
+            <label>
+                Email
+                <InputText @bind-Value="_model.Email" type="email" autocomplete="username"/>
+            </label>
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <p class="form-error">@_error</p>
+            }
+            @if (!string.IsNullOrEmpty(_info))
+            {
+                <p class="form-info">@_info</p>
+            }
+
+            <button type="submit" class="primary" disabled="@_busy">Envoyer le lien de réinitialisation</button>
+        </EditForm>
+        <p class="switch-mode">
+            <button class="link-button" @onclick="() => SwitchMode(Mode.Login)">Retour à la connexion</button>
         </p>
     }
     else
@@ -52,7 +82,10 @@
             </label>
             <label>
                 Mot de passe (6 caractères min.)
-                <InputText @bind-Value="_model.Password" type="password" autocomplete="new-password"/>
+                <div class="password-field">
+                    <InputText @bind-Value="_model.Password" type="@PasswordInputType" autocomplete="new-password"/>
+                    @PasswordToggleButton
+                </div>
             </label>
 
             @if (!string.IsNullOrEmpty(_error))
@@ -75,18 +108,44 @@
 </div>
 
 @code {
-    private enum Mode { Login, Register }
+    private enum Mode { Login, Register, ForgotPassword }
     private Mode _mode = Mode.Login;
     private readonly Credentials _model = new();
     private string? _error;
     private string? _info;
     private bool _busy;
+    private bool _showPassword;
+
+    private string PasswordInputType => _showPassword ? "text" : "password";
+
+    private void ToggleShowPassword() => _showPassword = !_showPassword;
+
+    private RenderFragment PasswordToggleButton => @<button type="button" class="password-toggle"
+                                                           @onclick="ToggleShowPassword"
+                                                           aria-label="@(_showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe")"
+                                                           title="@(_showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe")">
+        @if (_showPassword)
+        {
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                <line x1="1" y1="1" x2="23" y2="23"/>
+            </svg>
+        }
+        else
+        {
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/>
+                <circle cx="12" cy="12" r="3"/>
+            </svg>
+        }
+    </button>;
 
     private void SwitchMode(Mode mode)
     {
         _mode = mode;
         _error = null;
         _info = null;
+        _showPassword = false;
     }
 
     private async Task LoginAsync()
@@ -99,6 +158,32 @@
         if (error == null)
         {
             Navigation.NavigateTo("");
+        }
+        else
+        {
+            _error = error;
+        }
+    }
+
+    private async Task SendResetAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_model.Email))
+        {
+            _error = "Saisissez votre adresse email.";
+            _info = null;
+            return;
+        }
+
+        _busy = true;
+        _error = null;
+        _info = null;
+        var redirectTo = Navigation.ToAbsoluteUri("reset-password").ToString();
+        var error = await AuthService.SendPasswordResetAsync(_model.Email, redirectTo);
+        _busy = false;
+
+        if (error == null)
+        {
+            _info = "Si un compte existe pour cette adresse, un email de réinitialisation vient d'être envoyé. Suivez le lien qu'il contient pour choisir un nouveau mot de passe.";
         }
         else
         {

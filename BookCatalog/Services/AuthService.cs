@@ -22,6 +22,8 @@ public class AuthService
 
     public bool IsAdmin => CurrentProfile?.IsAdmin ?? false;
 
+    public bool IsSuperAdmin => CurrentProfile?.IsSuperAdmin ?? false;
+
     public Guid? CurrentUserId =>
         Guid.TryParse(_client.Auth.CurrentUser?.Id, out var id) ? id : null;
 
@@ -92,6 +94,60 @@ public class AuthService
         catch (Exception ex)
         {
             return (false, false, ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Sends a password-reset email. The link in it points back to <paramref name="redirectTo"/>
+    /// (which must be listed in the Supabase project's redirect allow-list) with the recovery
+    /// tokens in the URL fragment - see the ResetPassword page.
+    /// </summary>
+    /// <returns>null on success, otherwise an error message.</returns>
+    public async Task<string?> SendPasswordResetAsync(string email, string redirectTo)
+    {
+        try
+        {
+            var options = new ResetPasswordForEmailOptions(email)
+            {
+                FlowType = Supabase.Gotrue.Constants.OAuthFlowType.Implicit,
+                RedirectTo = redirectTo
+            };
+            await _client.Auth.ResetPasswordForEmail(options);
+            return null;
+        }
+        catch (Exception ex)
+        {
+            return ex.Message;
+        }
+    }
+
+    /// <summary>Establishes a session from the recovery tokens carried in a reset-link redirect.</summary>
+    /// <returns>null on success, otherwise an error message.</returns>
+    public async Task<string?> SetSessionFromRecoveryAsync(string accessToken, string refreshToken)
+    {
+        try
+        {
+            var session = await _client.Auth.SetSession(accessToken, refreshToken);
+            return session?.AccessToken != null ? null : "Lien de réinitialisation invalide ou expiré.";
+        }
+        catch (Exception ex)
+        {
+            return ex.Message;
+        }
+    }
+
+    /// <summary>Changes the password of the currently signed-in user (used by the recovery flow).</summary>
+    /// <returns>null on success, otherwise an error message.</returns>
+    public async Task<string?> UpdatePasswordAsync(string newPassword)
+    {
+        try
+        {
+            await _client.Auth.Update(new UserAttributes { Password = newPassword });
+            return null;
+        }
+        catch (Exception ex)
+        {
+            return ex.Message;
         }
     }
 

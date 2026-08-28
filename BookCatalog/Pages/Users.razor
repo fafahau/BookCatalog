@@ -22,15 +22,20 @@ else
                     <div class="user-name">@(string.IsNullOrWhiteSpace(profile.DisplayName) ? "(sans nom)" : profile.DisplayName)</div>
                     <div class="user-id">@profile.Id</div>
                 </div>
-                <select value="@profile.Role" @onchange="e => ChangeRoleAsync(profile, (string)e.Value!)" disabled="@(profile.Id == AuthService.CurrentUserId)">
+                <select value="@profile.Role" @onchange="e => ChangeRoleAsync(profile, (string)e.Value!)" disabled="@IsRoleLocked(profile)">
+                    @if (profile.IsSuperAdmin || AuthService.IsSuperAdmin)
+                    {
+                        <option value="superadmin">superadmin</option>
+                    }
                     <option value="admin">admin</option>
                     <option value="readonly">readonly</option>
                 </select>
-                <button class="icon-button danger" title="Retirer" disabled="@(profile.Id == AuthService.CurrentUserId)" @onclick="() => RemoveAsync(profile)">🗑</button>
+                <button class="icon-button danger" title="Retirer" disabled="@IsRemoveLocked(profile)" @onclick="() => RemoveAsync(profile)">🗑</button>
             </li>
         }
     </ul>
     <p class="hint">« Retirer » révoque l'accès au catalogue (suppression du profil). Pour supprimer complètement un compte, utilisez le tableau de bord Supabase.</p>
+    <p class="hint">Un compte <strong>superadmin</strong> ne peut pas être retiré et seul un autre superadmin peut changer son rôle.</p>
 }
 
 @code {
@@ -49,8 +54,25 @@ else
         _loading = false;
     }
 
+    // A superadmin row is only editable by another superadmin; you can never edit your own row.
+    private bool IsRoleLocked(Profile profile) =>
+        profile.Id == AuthService.CurrentUserId
+        || (profile.IsSuperAdmin && !AuthService.IsSuperAdmin);
+
+    // A superadmin profile can never be removed here (RLS enforces this too); nor can your own.
+    private bool IsRemoveLocked(Profile profile) =>
+        profile.Id == AuthService.CurrentUserId || profile.IsSuperAdmin;
+
     private async Task ChangeRoleAsync(Profile profile, string role)
     {
+        // Only a superadmin may grant or touch the 'superadmin' role. The RLS
+        // policy profiles_admin_update enforces this server-side too; this is
+        // just a clean client-side stop so we never fire a doomed request.
+        if ((role == "superadmin" || profile.IsSuperAdmin) && !AuthService.IsSuperAdmin)
+        {
+            return;
+        }
+
         await UserService.SetRoleAsync(profile.Id, role);
         await ReloadAsync();
     }

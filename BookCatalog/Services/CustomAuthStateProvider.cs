@@ -24,6 +24,13 @@ public class CustomAuthStateProvider : AuthenticationStateProvider
                 new(ClaimTypes.NameIdentifier, _authService.CurrentUserId?.ToString() ?? string.Empty),
                 new(ClaimTypes.Role, _authService.CurrentProfile.Role)
             };
+
+            // superadmin is a superset of admin: also grant the "admin" role claim
+            // so every [Authorize(Roles = "admin")] / <AuthorizeView Roles="admin"> keeps working.
+            if (_authService.CurrentProfile.IsSuperAdmin)
+            {
+                claims.Add(new Claim(ClaimTypes.Role, "admin"));
+            }
             identity = new ClaimsIdentity(claims, "supabase");
         }
         else

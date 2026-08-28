@@ -228,6 +228,38 @@ label {
     color: #444;
 }
 
+.password-field {
+    position: relative;
+}
+
+.password-field input {
+    padding-right: 2.75rem;
+}
+
+.password-toggle {
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    border: none;
+    background: none;
+    color: #777;
+    padding: 0;
+    cursor: pointer;
+}
+
+.password-toggle:hover {
+    color: var(--accent);
+}
+
+.password-toggle svg {
+    display: block;
+}
+
 .form-error {
     color: var(--danger);
     font-size: 0.9rem;

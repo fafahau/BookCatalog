@@ -18,5 +18,8 @@ public class Profile : BaseModel
     [Column("created_at")]
     public DateTime CreatedAt { get; set; }
 
-    public bool IsAdmin => Role == "admin";
+    public bool IsSuperAdmin => Role == "superadmin";
+
+    /// <summary>True for both 'admin' and 'superadmin' — superadmin is a superset of admin.</summary>
+    public bool IsAdmin => Role is "admin" or "superadmin";
 }

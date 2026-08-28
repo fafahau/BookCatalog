@@ -12,13 +12,20 @@ Application PWA (Blazor WebAssembly + Supabase) pour cataloguer les livres physi
 
 1. Dans le [dashboard Supabase](https://supabase.com/dashboard), ouvrez le projet `https://yukbvkvusufxawhstpiq.supabase.co`.
 2. **SQL Editor** → New query → collez tout le contenu de [`sql/schema.sql`](sql/schema.sql) → Run.
-   Ce script crée les tables `profiles`/`collections`/`books`, active la RLS avec les policies admin/readonly, crée le trigger qui génère automatiquement un profil (`role = 'readonly'`) à chaque inscription, et crée le bucket Storage `book-photos` avec ses policies.
-3. **Authentication → URL Configuration** : renseignez le **Site URL** (et Redirect URLs) avec l'URL de déploiement finale (ex. `https://<user>.github.io/<repo>/`), sinon les liens de confirmation d'e-mail redirigeront vers `localhost`.
-4. Créez votre premier compte depuis l'application (page "Créer un compte"), puis promouvez-le admin en SQL Editor :
+   Ce script crée les tables `profiles`/`collections`/`books`, active la RLS avec les policies superadmin/admin/readonly, crée le trigger qui génère automatiquement un profil (`role = 'readonly'`) à chaque inscription, et crée le bucket Storage `book-photos` avec ses policies.
+3. **Authentication → URL Configuration** :
+   - **Site URL** : l'URL de déploiement finale (ex. `https://<user>.github.io/<repo>/`), sinon les liens de confirmation d'e-mail redirigeront vers `localhost`.
+   - **Redirect URLs** : ajoutez les URL vers lesquelles les liens e-mail peuvent renvoyer. La réinitialisation de mot de passe renvoie vers `.../reset-password`, donc ajoutez au minimum :
+     - `https://<user>.github.io/<repo>/reset-password`
+     - `http://localhost:5000/reset-password` et l'URL HTTPS locale (ex. `https://localhost:7xxx/reset-password`) pour les tests en dev
+     Les jokers sont acceptés (ex. `https://<user>.github.io/<repo>/*`).
+4. Créez votre premier compte depuis l'application (page "Créer un compte"), puis promouvez-le `superadmin` en SQL Editor :
    ```sql
-   update public.profiles set role = 'admin' where id = '<uuid de auth.users>';
+   update public.profiles set role = 'superadmin' where id = '<uuid de auth.users>';
    ```
-   (l'UUID est visible dans **Authentication → Users**). Les comptes suivants pourront être promus depuis la page **Utilisateurs** de l'app.
+   (l'UUID est visible dans **Authentication → Users**). Les comptes suivants pourront être promus `admin` (ou `superadmin` par un superadmin) depuis la page **Utilisateurs** de l'app.
+
+   Rôles : `readonly` (lecture seule) < `admin` (gestion du catalogue et des utilisateurs) < `superadmin` (identique à `admin`, mais son profil ne peut pas être retiré depuis la page Utilisateurs et seul un autre superadmin peut changer son rôle). Pour retirer ou rétrograder le dernier superadmin, passez par le SQL Editor.
 
 ## 2. Configuration de l'app
 
@@ -67,7 +74,26 @@ Ajoutez ces secrets dans **Settings → Secrets and variables → Actions** du d
 
 **Si le ping échoue et que le projet se met quand même en pause** : dashboard Supabase → sélectionner le projet → bandeau "Project paused" → **Restore project**. Les données ne sont pas perdues, seule l'instance est redémarrée (délai de quelques minutes).
 
-## 6. PWA
+## 6. Réinitialisation du mot de passe
+
+Depuis la page de connexion, **« Mot de passe oublié ? »** demande l'e-mail et appelle
+`ResetPasswordForEmail` (flow implicite). Supabase envoie un e-mail dont le lien renvoie
+vers `/reset-password` avec les jetons de récupération dans le fragment d'URL ; la page
+[`Pages/ResetPassword.razor`](Pages/ResetPassword.razor) lit ce fragment via
+[`wwwroot/js/authRedirect.js`](wwwroot/js/authRedirect.js), ouvre une session temporaire,
+laisse choisir un nouveau mot de passe (`Auth.Update`), puis déconnecte pour forcer une
+reconnexion.
+
+Prérequis côté Supabase :
+
+- **Redirect URLs** doit lister l'URL `.../reset-password` (voir étape 1.3), sinon Supabase
+  refuse la redirection.
+- **Authentication → Email Templates → Reset Password** : le template par défaut convient
+  (`{{ .ConfirmationURL }}`). Le lien pointe vers `.../auth/v1/verify?...&redirect_to=.../reset-password`.
+- Le champ mot de passe de connexion et celui de `reset-password` ont un bouton
+  **Afficher / Masquer**.
+
+## 7. PWA
 
 L'app est installable ("Ajouter à l'écran d'accueil" sur mobile, icône d'installation dans la barre d'adresse sur desktop). Le manifest et le service worker sont générés par le template Blazor WASM PWA (`wwwroot/manifest.webmanifest`, `wwwroot/service-worker*.js`).
 
