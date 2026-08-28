@@ -2,6 +2,7 @@
 @page "/book/{Id:guid}/edit"
 @attribute [Authorize(Roles = "admin")]
 @inject BookService BookService
+@inject LabelService LabelService
 @inject CollectionService CollectionService
 @inject IsbnLookupService IsbnLookupService
 @inject ImageUploadService ImageUploadService
@@ -53,6 +54,29 @@ else
     {
         <p class="form-info">@_isbnMessage</p>
     }
+
+    @* Outside the EditForm so pressing Enter adds a label instead of submitting. *@
+    <div class="label-field">
+        <span>Labels (optionnel)</span>
+        <div class="label-editor">
+            @foreach (var label in _labels)
+            {
+                <span class="label-chip">
+                    @label
+                    <button type="button" title="Retirer" @onclick="() => RemoveLabel(label)">&times;</button>
+                </span>
+            }
+            <input list="label-suggestions" autocomplete="off" placeholder="Ajouter un label"
+                   @bind="_labelDraft" @bind:event="oninput" @onkeydown="OnLabelKeyDown"/>
+            <button type="button" @onclick="AddLabelDraft" disabled="@string.IsNullOrWhiteSpace(_labelDraft)">Ajouter</button>
+        </div>
+        <datalist id="label-suggestions">
+            @foreach (var label in _allLabels)
+            {
+                <option value="@label"/>
+            }
+        </datalist>
+    </div>
 
     <EditForm Model="this" OnValidSubmit="SaveAsync">
         <label>
@@ -160,6 +184,10 @@ else
 
     private List<string> _authors = new();
 
+    private readonly List<string> _labels = new();
+    private string _labelDraft = string.Empty;
+    private List<string> _allLabels = new();
+
     private ElementReference _photo1FileRef;
     private ElementReference _photo1CamRef;
     private ElementReference _photo2FileRef;
@@ -184,6 +212,7 @@ else
                 _isbn = _existingBook.Isbn ?? string.Empty;
                 _photo1Preview = _existingBook.PhotoUrl1;
                 _photo2Preview = _existingBook.PhotoUrl2;
+                _labels.AddRange(_existingBook.LabelNames);
                 _collection = await CollectionService.GetByIdAsync(_existingBook.CollectionId);
             }
         }
@@ -202,8 +231,46 @@ else
             _authors = new();
         }
 
+        try
+        {
+            _allLabels = await LabelService.GetNamesAsync();
+        }
+        catch
+        {
+            _allLabels = new();
+        }
+
         _loading = false;
     }
+
+    private void OnLabelKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            AddLabelDraft();
+        }
+    }
+
+    private void AddLabelDraft()
+    {
+        var label = _labelDraft.Trim();
+        _labelDraft = string.Empty;
+
+        if (label.Length == 0 || _labels.Any(l => l.Equals(label, StringComparison.OrdinalIgnoreCase)))
+        {
+            return;
+        }
+
+        _labels.Add(label);
+    }
+
+    private void RemoveLabel(string label) => _labels.Remove(label);
+
+    private List<string> NormalizedLabels() => _labels
+        .Select(l => l.Trim())
+        .Where(l => l.Length > 0)
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .ToList();
 
     private async Task LookupIsbnAsync()
     {
@@ -377,6 +444,10 @@ else
         _saving = true;
         _error = null;
 
+        // Fold in a label the user typed but didn't confirm with Enter / "Ajouter".
+        AddLabelDraft();
+        var labels = NormalizedLabels();
+
         try
         {
             Guid bookId;
@@ -431,6 +502,8 @@ else
                     await BookService.UpdateAsync(created);
                 }
             }
+
+            await LabelService.SetBookLabelsAsync(bookId, labels);
 
             Navigation.NavigateTo($"collection/{collectionId}");
         }

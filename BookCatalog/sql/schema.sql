@@ -40,6 +40,29 @@ alter table public.profiles drop constraint if exists profiles_role_check;
 alter table public.profiles
     add constraint profiles_role_check check (role in ('superadmin', 'admin', 'readonly'));
 
+-- Free-form labels/tags (added after the initial release). A label is a shared
+-- row; books and labels have a many-to-many link via book_labels (each book
+-- carries 0-N labels).
+create table if not exists public.labels (
+    id         uuid primary key default gen_random_uuid(),
+    name       text not null,
+    created_at timestamptz not null default now()
+);
+
+-- Case-insensitive uniqueness: "Jeunesse" and "jeunesse" are the same label.
+create unique index if not exists labels_name_lower_key on public.labels (lower(name));
+
+create table if not exists public.book_labels (
+    id         uuid primary key default gen_random_uuid(),
+    book_id    uuid not null references public.books (id) on delete cascade,
+    label_id   uuid not null references public.labels (id) on delete cascade,
+    created_at timestamptz not null default now(),
+    unique (book_id, label_id)
+);
+
+create index if not exists book_labels_book_id_idx on public.book_labels (book_id);
+create index if not exists book_labels_label_id_idx on public.book_labels (label_id);
+
 -- ============================================================
 -- 2. Auto-create a profile row whenever a new auth user signs up
 --    (default role 'readonly' — an admin promotes manually afterwards).
@@ -104,6 +127,8 @@ $$;
 alter table public.profiles enable row level security;
 alter table public.collections enable row level security;
 alter table public.books enable row level security;
+alter table public.labels enable row level security;
+alter table public.book_labels enable row level security;
 
 -- profiles: everyone can read their own row (needed to know their own role);
 -- admins can read/update/delete every row (Users.razor), EXCEPT that a
@@ -140,6 +165,23 @@ create policy books_select on public.books
 
 drop policy if exists books_admin_write on public.books;
 create policy books_admin_write on public.books
+    for all using (public.is_admin()) with check (public.is_admin());
+
+-- labels / book_labels: same shape as books — any profile reads, admins write.
+drop policy if exists labels_select on public.labels;
+create policy labels_select on public.labels
+    for select using (exists (select 1 from public.profiles where id = auth.uid()));
+
+drop policy if exists labels_admin_write on public.labels;
+create policy labels_admin_write on public.labels
+    for all using (public.is_admin()) with check (public.is_admin());
+
+drop policy if exists book_labels_select on public.book_labels;
+create policy book_labels_select on public.book_labels
+    for select using (exists (select 1 from public.profiles where id = auth.uid()));
+
+drop policy if exists book_labels_admin_write on public.book_labels;
+create policy book_labels_admin_write on public.book_labels
     for all using (public.is_admin()) with check (public.is_admin());
 
 -- ============================================================

@@ -1,0 +1,90 @@
+@page "/labels"
+@attribute [Authorize(Roles = "admin")]
+@inject LabelService LabelService
+@inject IJSRuntime JS
+
+<PageTitle>Labels</PageTitle>
+
+<h1>Labels</h1>
+
+@if (_loading)
+{
+    <p>Chargement...</p>
+}
+else if (_labels.Count == 0)
+{
+    <p class="empty-state">Aucun label pour l'instant. Ajoutez-en depuis le formulaire d'un livre.</p>
+}
+else
+{
+    <ul class="label-list">
+        @foreach (var label in _labels)
+        {
+            <li class="label-row" @key="label.Id">
+                <input value="@_drafts[label.Id]" @oninput="e => _drafts[label.Id] = (string?)e.Value ?? string.Empty"/>
+                <button class="primary"
+                        disabled="@(_busy || string.IsNullOrWhiteSpace(_drafts[label.Id]) || _drafts[label.Id].Trim() == label.Name)"
+                        @onclick="() => RenameAsync(label)">Renommer</button>
+                <button class="icon-button danger" title="Supprimer" disabled="@_busy" @onclick="() => DeleteAsync(label)">🗑</button>
+            </li>
+        }
+    </ul>
+    <p class="hint">Renommer ou supprimer un label s'applique à tous les livres qui le portent.</p>
+}
+
+@code {
+    private List<Label> _labels = new();
+    private Dictionary<Guid, string> _drafts = new();
+    private bool _loading = true;
+    private bool _busy;
+
+    protected override async Task OnInitializedAsync() => await ReloadAsync();
+
+    private async Task ReloadAsync()
+    {
+        _loading = true;
+        _labels = await LabelService.GetAllAsync();
+        _drafts = _labels.ToDictionary(l => l.Id, l => l.Name);
+        _loading = false;
+    }
+
+    private async Task RenameAsync(Label label)
+    {
+        var newName = _drafts[label.Id].Trim();
+        if (newName.Length == 0 || newName == label.Name)
+        {
+            return;
+        }
+
+        _busy = true;
+        try
+        {
+            await LabelService.RenameAsync(label.Id, newName);
+            await ReloadAsync();
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private async Task DeleteAsync(Label label)
+    {
+        var confirmed = await JS.InvokeAsync<bool>("confirm", $"Supprimer le label « {label.Name} » de tous les livres ?");
+        if (!confirmed)
+        {
+            return;
+        }
+
+        _busy = true;
+        try
+        {
+            await LabelService.DeleteAsync(label.Id);
+            await ReloadAsync();
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+}
