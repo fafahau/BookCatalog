@@ -52,6 +52,20 @@ public class BookService
         return result.Models;
     }
 
+    public async Task<List<string>> GetAuthorsAsync()
+    {
+        var result = await _client.From<Book>()
+            .Select("author")
+            .Get();
+
+        return result.Models
+            .Select(b => b.Author?.Trim() ?? string.Empty)
+            .Where(a => !string.IsNullOrWhiteSpace(a))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(a => a, StringComparer.CurrentCultureIgnoreCase)
+            .ToList();
+    }
+
     public async Task<Book?> GetByIdAsync(Guid id)
     {
         return await _client.From<Book>()
