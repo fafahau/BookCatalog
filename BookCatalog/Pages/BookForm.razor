@@ -6,6 +6,7 @@
 @inject CollectionService CollectionService
 @inject IsbnLookupService IsbnLookupService
 @inject ImageUploadService ImageUploadService
+@inject ImageViewerService ImageViewer
 @inject AuthService AuthService
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
@@ -99,7 +100,7 @@ else
                 <span>Photo 1</span>
                 @if (!string.IsNullOrEmpty(_photo1Preview))
                 {
-                    <img class="photo-preview" src="@_photo1Preview" alt=""/>
+                    <img class="photo-preview zoomable" src="@_photo1Preview" alt="" @onclick="() => ImageViewer.Show(_photo1Preview)"/>
                 }
                 <div class="photo-actions">
                     <label class="file-btn">
@@ -120,7 +121,7 @@ else
                 <span>Photo 2</span>
                 @if (!string.IsNullOrEmpty(_photo2Preview))
                 {
-                    <img class="photo-preview" src="@_photo2Preview" alt=""/>
+                    <img class="photo-preview zoomable" src="@_photo2Preview" alt="" @onclick="() => ImageViewer.Show(_photo2Preview)"/>
                 }
                 <div class="photo-actions">
                     <label class="file-btn">

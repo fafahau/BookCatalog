@@ -10,7 +10,9 @@
             </a>
         </header>
         <nav class="navmenu">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">Collections</NavLink>
+            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">Accueil</NavLink>
+            <NavLink class="nav-link" href="recherche">Recherche</NavLink>
+            <NavLink class="nav-link" href="collections">Collections</NavLink>
             <AuthorizeView Roles="admin" Context="adminContext">
                 <Authorized>
                     <NavLink class="nav-link" href="labels">Labels</NavLink>

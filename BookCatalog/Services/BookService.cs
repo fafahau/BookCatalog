@@ -1,5 +1,6 @@
 using BookCatalog.Models;
 using Supabase.Postgrest;
+using Supabase.Postgrest.Interfaces;
 
 namespace BookCatalog.Services;
 
@@ -72,6 +73,80 @@ public class BookService
         }
 
         return books;
+    }
+
+    /// <summary>
+    /// Finds every book whose ISBN matches <paramref name="isbn"/>, across all collections,
+    /// regardless of the caller's role (books are readable by any signed-in user).
+    /// Comparison is done on digits only so hyphenated / scanned forms all match.
+    /// </summary>
+    public async Task<List<Book>> SearchByIsbnAsync(string isbn)
+    {
+        var normalized = NormalizeIsbn(isbn);
+        if (normalized.Length < 8)
+        {
+            return new();
+        }
+
+        var result = await _client.From<Book>()
+            .Order("created_at", Constants.Ordering.Descending)
+            .Get();
+
+        return result.Models
+            .Where(b => NormalizeIsbn(b.Isbn) == normalized)
+            .ToList();
+    }
+
+    /// <summary>
+    /// Finds every book whose title and/or author matches, across all collections.
+    /// Both terms are optional; an empty query returns nothing.
+    /// </summary>
+    public async Task<List<Book>> SearchAsync(string? title, string? author)
+    {
+        var titleTerm = title?.Trim();
+        var authorTerm = author?.Trim();
+        if (string.IsNullOrWhiteSpace(titleTerm) && string.IsNullOrWhiteSpace(authorTerm))
+        {
+            return new();
+        }
+
+        IPostgrestTable<Book> query = _client.From<Book>();
+
+        if (!string.IsNullOrWhiteSpace(titleTerm))
+        {
+            query = query.Filter("title", Constants.Operator.ILike, $"%{titleTerm}%");
+        }
+
+        if (!string.IsNullOrWhiteSpace(authorTerm))
+        {
+            query = query.Filter("author", Constants.Operator.ILike, $"%{authorTerm}%");
+        }
+
+        var result = await query.Order("title", Constants.Ordering.Ascending).Get();
+        return result.Models;
+    }
+
+    /// <summary>Every book with no ISBN recorded, across all collections, ordered by title.</summary>
+    public async Task<List<Book>> GetBooksWithoutIsbnAsync()
+    {
+        var result = await _client.From<Book>()
+            .Order("title", Constants.Ordering.Ascending)
+            .Get();
+
+        return result.Models
+            .Where(b => NormalizeIsbn(b.Isbn).Length == 0)
+            .ToList();
+    }
+
+    /// <summary>Keeps digits (and a trailing ISBN-10 check "X"); drops hyphens, spaces, prefixes.</summary>
+    public static string NormalizeIsbn(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return string.Empty;
+        }
+
+        return new string(raw.Where(c => char.IsDigit(c) || c is 'X' or 'x').ToArray()).ToUpperInvariant();
     }
 
     public async Task<List<string>> GetAuthorsAsync()

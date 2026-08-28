@@ -1,0 +1,18 @@
+@implements IDisposable
+@inject ImageViewerService ImageViewer
+
+@if (ImageViewer.CurrentUrl is { } url)
+{
+    <div class="image-viewer-overlay" @onclick="ImageViewer.Close">
+        <button type="button" class="image-viewer-close" aria-label="Fermer" @onclick="ImageViewer.Close">✕</button>
+        <img class="image-viewer-img" src="@url" alt="" @onclick:stopPropagation="true"/>
+    </div>
+}
+
+@code {
+    protected override void OnInitialized() => ImageViewer.OnChange += Refresh;
+
+    private void Refresh() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => ImageViewer.OnChange -= Refresh;
+}
