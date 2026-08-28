@@ -9,7 +9,7 @@
 create table if not exists public.profiles (
     id           uuid primary key references auth.users (id) on delete cascade,
     display_name text,
-    role         text not null default 'readonly' check (role in ('admin', 'readonly')),
+    role         text not null default 'readonly' check (role in ('superadmin', 'admin', 'readonly')),
     created_at   timestamptz not null default now()
 );
 
@@ -33,6 +33,12 @@ create table if not exists public.books (
 );
 
 create index if not exists books_collection_id_idx on public.books (collection_id);
+
+-- Widen the role check to allow 'superadmin' when re-running against an existing DB
+-- (create table if not exists above leaves the old constraint in place).
+alter table public.profiles drop constraint if exists profiles_role_check;
+alter table public.profiles
+    add constraint profiles_role_check check (role in ('superadmin', 'admin', 'readonly'));
 
 -- ============================================================
 -- 2. Auto-create a profile row whenever a new auth user signs up
@@ -58,9 +64,11 @@ create trigger on_auth_user_created
     for each row execute procedure public.handle_new_user();
 
 -- ============================================================
--- 3. Helper: is the current authenticated user an admin?
---    SECURITY DEFINER so it can read profiles regardless of the caller's
+-- 3. Helpers: role checks for the current authenticated user.
+--    SECURITY DEFINER so they can read profiles regardless of the caller's
 --    own RLS visibility, avoiding any recursive-policy edge cases.
+--    'superadmin' is a strict superset of 'admin': is_admin() is true for both,
+--    so every admin-only policy below also covers superadmins.
 -- ============================================================
 
 create or replace function public.is_admin()
@@ -72,7 +80,20 @@ stable
 as $$
     select exists (
         select 1 from public.profiles
-        where id = auth.uid() and role = 'admin'
+        where id = auth.uid() and role in ('admin', 'superadmin')
+    );
+$$;
+
+create or replace function public.is_superadmin()
+returns boolean
+language sql
+security definer
+set search_path = public
+stable
+as $$
+    select exists (
+        select 1 from public.profiles
+        where id = auth.uid() and role = 'superadmin'
     );
 $$;
 
@@ -85,18 +106,22 @@ alter table public.collections enable row level security;
 alter table public.books enable row level security;
 
 -- profiles: everyone can read their own row (needed to know their own role);
--- admins can read/update/delete every row (Users.razor).
+-- admins can read/update/delete every row (Users.razor), EXCEPT that a
+-- 'superadmin' row can only be modified by another superadmin and can never
+-- be deleted through the app.
 drop policy if exists profiles_select on public.profiles;
 create policy profiles_select on public.profiles
     for select using (id = auth.uid() or public.is_admin());
 
 drop policy if exists profiles_admin_update on public.profiles;
 create policy profiles_admin_update on public.profiles
-    for update using (public.is_admin()) with check (public.is_admin());
+    for update
+    using (public.is_admin() and (role <> 'superadmin' or public.is_superadmin()))
+    with check (public.is_admin() and (role <> 'superadmin' or public.is_superadmin()));
 
 drop policy if exists profiles_admin_delete on public.profiles;
 create policy profiles_admin_delete on public.profiles
-    for delete using (public.is_admin());
+    for delete using (public.is_admin() and role <> 'superadmin');
 
 -- collections: any signed-in user with a profile can read;
 -- only admins can create/rename/delete.
@@ -145,6 +170,10 @@ create policy book_photos_admin_write on storage.objects
     with check (bucket_id = 'book-photos' and public.is_admin());
 
 -- ============================================================
--- 6. Bootstrap: promote the first user to admin manually, e.g.:
---   update public.profiles set role = 'admin' where id = '<uuid from auth.users>';
+-- 6. Bootstrap: promote the first user to admin (or superadmin) manually, e.g.:
+--   update public.profiles set role = 'superadmin' where id = '<uuid from auth.users>';
+--
+-- A superadmin has every admin capability plus: their profile cannot be deleted
+-- from the Users screen and their role can only be changed by another superadmin.
+-- To remove or demote the last superadmin, run SQL from the Supabase dashboard.
 -- ============================================================
