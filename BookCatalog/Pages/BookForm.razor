@@ -61,8 +61,14 @@ else
         </label>
         <label>
             Auteur
-            <input required @bind="_author" @bind:event="oninput"/>
+            <input required list="author-suggestions" autocomplete="off" @bind="_author" @bind:event="oninput"/>
         </label>
+        <datalist id="author-suggestions">
+            @foreach (var author in _authors)
+            {
+                <option value="@author"/>
+            }
+        </datalist>
 
         <div class="photo-inputs">
             <div class="photo-input">
@@ -152,6 +158,8 @@ else
     private string _author = string.Empty;
     private string _isbn = string.Empty;
 
+    private List<string> _authors = new();
+
     private ElementReference _photo1FileRef;
     private ElementReference _photo1CamRef;
     private ElementReference _photo2FileRef;
@@ -182,6 +190,16 @@ else
         else
         {
             _collection = await CollectionService.GetByIdAsync(CollectionId);
+        }
+
+        try
+        {
+            _authors = await BookService.GetAuthorsAsync();
+        }
+        catch
+        {
+            // Autocompletion is a convenience — a failure here shouldn't block the form.
+            _authors = new();
         }
 
         _loading = false;
