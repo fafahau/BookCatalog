@@ -126,7 +126,7 @@
     }
 
 code {
-    color: #c02d76;
+    color: var(--code);
 }
 
 .form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {
@@ -144,9 +144,57 @@ code {
     --accent: #1b6ec2;
     --accent-dark: #145a9e;
     --text: #222;
+    --text-soft: #444;
+    --text-muted: #6b7280;
+    --text-faint: #777;
     --border: #ddd;
     --danger: #c0392b;
-    color-scheme: light only;
+    --bg: #ffffff;
+    --surface: #ffffff;
+    --surface-alt: #f4f4f4;
+    --thumb-bg: #f0f0f0;
+    --code: #c02d76;
+    color-scheme: light;
+}
+
+/* Dark palette: follows the device preference by default, unless the user has
+   explicitly chosen light (data-theme="light" on <html>). */
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+        --accent: #4d9de0;
+        --accent-dark: #7cb8e8;
+        --text: #e6e6e6;
+        --text-soft: #c7c7c7;
+        --text-muted: #9aa3b2;
+        --text-faint: #8b8b8b;
+        --border: #3a3f47;
+        --danger: #e06c5b;
+        --bg: #16181c;
+        --surface: #1e2126;
+        --surface-alt: #262a30;
+        --thumb-bg: #2a2e35;
+        --code: #ff8fbf;
+        color-scheme: dark;
+    }
+}
+
+/* Explicit manual override wins in both directions. Keep values in sync with the
+   media block above. */
+:root[data-theme="dark"] {
+    --accent: #4d9de0;
+    --accent-dark: #7cb8e8;
+    --text: #e6e6e6;
+    --text-soft: #c7c7c7;
+    --text-muted: #9aa3b2;
+    --text-faint: #8b8b8b;
+    --border: #3a3f47;
+    --danger: #e06c5b;
+    --bg: #16181c;
+    --surface: #1e2126;
+    --surface-alt: #262a30;
+    --thumb-bg: #2a2e35;
+    --code: #ff8fbf;
+    color-scheme: dark;
 }
 
 * {
@@ -155,7 +203,7 @@ code {
 
 html, body {
     margin: 0;
-    background: #ffffff;
+    background: var(--bg);
     color: var(--text);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
@@ -176,7 +224,8 @@ button, input, select {
 button {
     cursor: pointer;
     border: 1px solid var(--border);
-    background: #fff;
+    background: var(--surface);
+    color: var(--text);
     border-radius: 6px;
     padding: 0.5rem 0.9rem;
 }
@@ -219,13 +268,15 @@ input[type=text], input[type=email], input[type=password], input[type=date], inp
     border: 1px solid var(--border);
     border-radius: 6px;
     margin-top: 0.25rem;
+    background: var(--surface);
+    color: var(--text);
 }
 
 label {
     display: block;
     margin-bottom: 0.85rem;
     font-size: 0.9rem;
-    color: #444;
+    color: var(--text-soft);
 }
 
 .password-field {
@@ -247,7 +298,7 @@ label {
     width: 2.5rem;
     border: none;
     background: none;
-    color: #777;
+    color: var(--text-faint);
     padding: 0;
     cursor: pointer;
 }
@@ -271,12 +322,12 @@ label {
 }
 
 .hint {
-    color: #777;
+    color: var(--text-faint);
     font-size: 0.85rem;
 }
 
 .empty-state {
-    color: #777;
+    color: var(--text-faint);
     font-style: italic;
 }
 
@@ -388,7 +439,7 @@ label {
     padding: 1.75rem 1rem;
     border: 1px solid var(--border);
     border-radius: 10px;
-    background: #fff;
+    background: var(--surface);
     color: var(--text);
     text-decoration: none;
     text-align: center;
@@ -567,7 +618,7 @@ label {
     padding: 0.55rem 0.75rem;
     font-size: 0.9rem;
     font-weight: 600;
-    color: #444;
+    color: var(--text-soft);
     list-style: none;
 }
 
@@ -659,7 +710,7 @@ label {
     height: 64px;
     object-fit: cover;
     border-radius: 4px;
-    background: #f0f0f0;
+    background: var(--thumb-bg);
     flex-shrink: 0;
 }
 
@@ -668,7 +719,7 @@ label {
 }
 
 .book-author {
-    color: #666;
+    color: var(--text-muted);
     font-size: 0.9rem;
 }
 
@@ -694,7 +745,7 @@ label {
     aspect-ratio: 3 / 4;
     object-fit: cover;
     border-radius: 6px;
-    background: #f0f0f0;
+    background: var(--thumb-bg);
 }
 
 .book-tile-title {
@@ -722,8 +773,8 @@ label {
     padding: 0.1rem 0.5rem;
     border: 1px solid var(--border);
     border-radius: 999px;
-    background: #f4f4f4;
-    color: #444;
+    background: var(--surface-alt);
+    color: var(--text-soft);
 }
 
 .book-labels {
@@ -741,7 +792,7 @@ label {
     display: block;
     margin-bottom: 0.35rem;
     font-size: 0.9rem;
-    color: #444;
+    color: var(--text-soft);
 }
 
 .label-field {
@@ -768,7 +819,7 @@ label {
     padding: 0;
     font-size: 1rem;
     line-height: 1;
-    color: #888;
+    color: var(--text-faint);
     cursor: pointer;
 }
 
@@ -854,7 +905,7 @@ label {
     flex-direction: column;
     gap: 0.4rem;
     font-size: 0.85rem;
-    color: #444;
+    color: var(--text-soft);
 }
 
 .photo-preview {
@@ -879,7 +930,7 @@ label {
     padding: 0.5rem 0.9rem;
     border: 1px solid var(--border);
     border-radius: 6px;
-    background: #fff;
+    background: var(--surface);
     color: var(--text);
     font-size: 0.9rem;
     cursor: pointer;
@@ -984,7 +1035,7 @@ label {
 
 .user-id {
     font-size: 0.75rem;
-    color: #888;
+    color: var(--text-faint);
     overflow: hidden;
     text-overflow: ellipsis;
 }
@@ -1051,4 +1102,37 @@ label {
     font-size: 1.1rem;
     line-height: 1;
     cursor: pointer;
+}
+
+/* Theme toggle (Système / Clair / Sombre) */
+
+.theme-toggle {
+    display: inline-flex;
+    gap: 0.15rem;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 0.15rem;
+    background: var(--surface);
+}
+
+.theme-toggle button {
+    border: none;
+    background: none;
+    border-radius: 999px;
+    padding: 0.2rem 0.45rem;
+    font-size: 0.95rem;
+    line-height: 1;
+    color: var(--text-faint);
+}
+
+.theme-toggle button.active {
+    background: var(--accent);
+    color: #fff;
+}
+
+.theme-toggle-floating {
+    position: fixed;
+    top: 0.75rem;
+    right: 0.75rem;
+    z-index: 10;
 }
