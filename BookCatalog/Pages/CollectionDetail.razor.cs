@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using BookCatalog.Models;
 using BookCatalog.Services;
 
@@ -75,6 +76,16 @@ public partial class CollectionDetail
     private bool _isbnSearched;
     private List<Book> _isbnHere = new();
     private List<string> _isbnElsewhere = new();
+
+    // Bulk selection (admin): pick several books, then add one or more labels to
+    // all of them at once. Ephemeral — never persisted to localStorage.
+    private bool _selecting;
+    private readonly HashSet<Guid> _selectedIds = new();
+
+    private bool _labelDialogOpen;
+    private readonly List<string> _dialogLabels = new();
+    private string _dialogLabelDraft = string.Empty;
+    private bool _applyingLabels;
 
     protected override async Task OnInitializedAsync()
     {
@@ -175,6 +186,107 @@ public partial class CollectionDetail
         _filter.Label = null;
         _filter.Sort = BookSort.Recent;
         await ReloadBooksAsync();
+    }
+
+    private void ToggleSelecting()
+    {
+        _selecting = !_selecting;
+        if (!_selecting)
+        {
+            _selectedIds.Clear();
+            _labelDialogOpen = false;
+        }
+    }
+
+    private void ToggleBook(Book book)
+    {
+        if (!_selectedIds.Remove(book.Id))
+        {
+            _selectedIds.Add(book.Id);
+        }
+    }
+
+    // "Select all" spans every filtered book, not just the current page.
+    private void SelectAllFiltered()
+    {
+        foreach (var book in _books)
+        {
+            _selectedIds.Add(book.Id);
+        }
+    }
+
+    private void ClearSelection() => _selectedIds.Clear();
+
+    private void OpenLabelDialog()
+    {
+        _dialogLabels.Clear();
+        _dialogLabelDraft = string.Empty;
+        _labelDialogOpen = true;
+    }
+
+    private void CloseLabelDialog() => _labelDialogOpen = false;
+
+    private void OnDialogLabelKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            AddDialogLabel();
+        }
+    }
+
+    private void AddDialogLabel()
+    {
+        var label = _dialogLabelDraft.Trim();
+        _dialogLabelDraft = string.Empty;
+
+        if (label.Length == 0 || _dialogLabels.Any(l => l.Equals(label, StringComparison.OrdinalIgnoreCase)))
+        {
+            return;
+        }
+
+        _dialogLabels.Add(label);
+    }
+
+    private void RemoveDialogLabel(string label) => _dialogLabels.Remove(label);
+
+    private async Task ApplyLabelsAsync()
+    {
+        AddDialogLabel(); // fold in a label typed but not confirmed with Enter / "Ajouter"
+
+        var labels = _dialogLabels
+            .Select(l => l.Trim())
+            .Where(l => l.Length > 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        if (labels.Count == 0 || _selectedIds.Count == 0)
+        {
+            return;
+        }
+
+        _applyingLabels = true;
+        try
+        {
+            await LabelService.AddLabelsToBooksAsync(_selectedIds.ToList(), labels);
+
+            try
+            {
+                _allLabels = await LabelService.GetNamesAsync();
+            }
+            catch
+            {
+                // Suggestions are a convenience — a refresh failure shouldn't block the flow.
+            }
+
+            await ReloadBooksAsync();
+
+            _labelDialogOpen = false;
+            _selecting = false;
+            _selectedIds.Clear();
+        }
+        finally
+        {
+            _applyingLabels = false;
+        }
     }
 
     private async Task ReloadBooksAsync()

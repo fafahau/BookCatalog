@@ -140,10 +140,27 @@ else
 
         <AuthorizeView Roles="admin" Context="adminContext">
             <Authorized>
-                <button class="primary add-book" @onclick="AddBook">+ Ajouter un livre</button>
+                <div class="toolbar-admin-actions">
+                    <button type="button" class="select-toggle @(_selecting ? "active" : "")" @onclick="ToggleSelecting">
+                        @(_selecting ? "Annuler la sélection" : "Sélectionner")
+                    </button>
+                    <button class="primary add-book" @onclick="AddBook">+ Ajouter un livre</button>
+                </div>
             </Authorized>
         </AuthorizeView>
     </div>
+
+    @if (_selecting)
+    {
+        <div class="selection-bar">
+            <span class="selection-count">@_selectedIds.Count sélectionné(s)</span>
+            <button type="button" @onclick="SelectAllFiltered">Tout sélectionner</button>
+            <button type="button" @onclick="ClearSelection" disabled="@(_selectedIds.Count == 0)">Tout désélectionner</button>
+            <button type="button" class="primary" @onclick="OpenLabelDialog" disabled="@(_selectedIds.Count == 0)">
+                Ajouter des labels…
+            </button>
+        </div>
+    }
 
     @if (_booksLoading)
     {
@@ -156,7 +173,8 @@ else
     else if (_groupMode == GroupMode.None)
     {
         <BookCollectionList Books="PagedBooks" TileView="_viewMode == ViewMode.Tile"
-                           OnOpen="OpenBook" OnDelete="DeleteBookAsync"/>
+                           OnOpen="OpenBook" OnDelete="DeleteBookAsync"
+                           SelectionMode="_selecting" SelectedIds="_selectedIds" OnToggleSelect="ToggleBook"/>
 
         @if (_totalPages > 1)
         {
@@ -177,8 +195,40 @@ else
                     <span class="book-group-count">@group.Books.Count</span>
                 </summary>
                 <BookCollectionList Books="group.Books" TileView="_viewMode == ViewMode.Tile"
-                                   OnOpen="OpenBook" OnDelete="DeleteBookAsync"/>
+                                   OnOpen="OpenBook" OnDelete="DeleteBookAsync"
+                                   SelectionMode="_selecting" SelectedIds="_selectedIds" OnToggleSelect="ToggleBook"/>
             </details>
         }
+    }
+
+    @if (_labelDialogOpen)
+    {
+        <div class="modal-overlay" @onclick="CloseLabelDialog">
+            <div class="modal" role="dialog" aria-modal="true" aria-labelledby="bulk-label-title"
+                 @onclick:stopPropagation="true">
+                <h2 id="bulk-label-title" class="modal-title">
+                    Ajouter des labels à @_selectedIds.Count livre(s)
+                </h2>
+                <div class="label-editor">
+                    @foreach (var label in _dialogLabels)
+                    {
+                        <span class="label-chip">
+                            @label
+                            <button type="button" title="Retirer" @onclick="() => RemoveDialogLabel(label)">&times;</button>
+                        </span>
+                    }
+                    <input list="collection-label-suggestions" autocomplete="off" placeholder="Ajouter un label"
+                           @bind="_dialogLabelDraft" @bind:event="oninput" @onkeydown="OnDialogLabelKeyDown"/>
+                    <button type="button" @onclick="AddDialogLabel" disabled="@string.IsNullOrWhiteSpace(_dialogLabelDraft)">Ajouter</button>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" @onclick="CloseLabelDialog">Annuler</button>
+                    <button type="button" class="primary" @onclick="ApplyLabelsAsync"
+                            disabled="@(_applyingLabels || (_dialogLabels.Count == 0 && string.IsNullOrWhiteSpace(_dialogLabelDraft)))">
+                        @(_applyingLabels ? "Application…" : "Ajouter")
+                    </button>
+                </div>
+            </div>
+        </div>
     }
 }

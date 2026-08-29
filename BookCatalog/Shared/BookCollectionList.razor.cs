@@ -16,4 +16,17 @@ public partial class BookCollectionList
 
     [Parameter]
     public EventCallback<Book> OnDelete { get; set; }
+
+    /// <summary>When true, clicking an item toggles its selection instead of opening it.</summary>
+    [Parameter]
+    public bool SelectionMode { get; set; }
+
+    [Parameter]
+    public HashSet<Guid> SelectedIds { get; set; } = new();
+
+    [Parameter]
+    public EventCallback<Book> OnToggleSelect { get; set; }
+
+    private Task ItemClick(Book book) =>
+        SelectionMode ? OnToggleSelect.InvokeAsync(book) : OnOpen.InvokeAsync(book);
 }
