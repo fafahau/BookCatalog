@@ -28,7 +28,7 @@ else
         <h1>@_collection.Name</h1>
     </div>
 
-    <details class="filters-accordion" open="@_filtersOpen" @ontoggle="() => _filtersOpen = !_filtersOpen">
+    <details class="filters-accordion" open="@_filtersOpen">
         <summary>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-2px; margin-right:0.35rem;"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>
             Filtres
@@ -228,8 +228,9 @@ else
     private List<BookGroup> _groupedBooks = new();
 
     // Filters + view toggles are remembered across navigation and reloads
-    // (localStorage) until the user changes them.
-    private const string StateKey = "collection-view";
+    // (localStorage) until the user changes them. Keyed per collection, so each
+    // collection keeps its own filters.
+    private string StateKey => $"collection-view.{Id}";
 
     private sealed class ViewState
     {
@@ -242,8 +243,9 @@ else
         public int PageSize { get; set; } = 20;
     }
 
-    // Start expanded when restored filters would otherwise be hidden; the
-    // @ontoggle handler keeps this in sync with the user's clicks afterwards.
+    // Initial expand state only: true when restored filters would otherwise be
+    // hidden. Never reassigned, so Blazor's diff leaves the attribute alone
+    // after the first render and the user's own open/close clicks stick.
     private bool _filtersOpen;
 
     private bool _isbnSearching;
