@@ -750,9 +750,18 @@ label {
     margin-bottom: 1rem;
 }
 
+.new-label {
+    align-items: center;
+}
+
 .new-label input {
-    flex: 1;
+    flex: 0 1 auto;
     min-width: 0;
+    max-width: 320px;
+}
+
+.new-label button {
+    flex: none;
 }
 
 .collection-list {
