@@ -11,34 +11,87 @@
 {
     <p>Chargement...</p>
 }
-else if (_labels.Count == 0)
-{
-    <p class="empty-state">Aucun label pour l'instant. Ajoutez-en depuis le formulaire d'un livre.</p>
-}
 else
 {
-    <ul class="label-list">
-        @foreach (var label in _labels)
-        {
-            <li class="label-row" @key="label.Id">
-                <input value="@_drafts[label.Id]" @oninput="e => _drafts[label.Id] = (string?)e.Value ?? string.Empty"/>
-                <button class="primary"
-                        disabled="@(_busy || string.IsNullOrWhiteSpace(_drafts[label.Id]) || _drafts[label.Id].Trim() == label.Name)"
-                        @onclick="() => RenameAsync(label)">Renommer</button>
-                <button class="icon-button danger" title="Supprimer" disabled="@_busy" @onclick="() => DeleteAsync(label)">🗑</button>
-            </li>
-        }
-    </ul>
-    <p class="hint">Renommer ou supprimer un label s'applique à tous les livres qui le portent.</p>
+    <div class="new-label">
+        <input placeholder="Nom du nouveau label" @bind="_newLabelName" @bind:event="oninput"
+               @onkeydown="OnNewLabelKeyDown"/>
+        <button class="primary" disabled="@(_busy || string.IsNullOrWhiteSpace(_newLabelName))"
+                @onclick="CreateAsync">Ajouter</button>
+    </div>
+
+    @if (!string.IsNullOrEmpty(_message))
+    {
+        <p class="form-info">@_message</p>
+    }
+
+    @if (_labels.Count == 0)
+    {
+        <p class="empty-state">Aucun label pour l'instant.</p>
+    }
+    else
+    {
+        <ul class="label-list">
+            @foreach (var label in _labels)
+            {
+                <li class="label-row" @key="label.Id">
+                    <input value="@_drafts[label.Id]" @oninput="e => _drafts[label.Id] = (string?)e.Value ?? string.Empty"/>
+                    <button class="primary"
+                            disabled="@(_busy || string.IsNullOrWhiteSpace(_drafts[label.Id]) || _drafts[label.Id].Trim() == label.Name)"
+                            @onclick="() => RenameAsync(label)">Renommer</button>
+                    <button class="icon-button danger" title="Supprimer" disabled="@_busy" @onclick="() => DeleteAsync(label)">🗑</button>
+                </li>
+            }
+        </ul>
+        <p class="hint">Renommer ou supprimer un label s'applique à tous les livres qui le portent.</p>
+    }
 }
 
 @code {
     private List<Label> _labels = new();
     private Dictionary<Guid, string> _drafts = new();
+    private string _newLabelName = string.Empty;
+    private string? _message;
     private bool _loading = true;
     private bool _busy;
 
     protected override async Task OnInitializedAsync() => await ReloadAsync();
+
+    private async Task OnNewLabelKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await CreateAsync();
+        }
+    }
+
+    private async Task CreateAsync()
+    {
+        var name = _newLabelName.Trim();
+        if (name.Length == 0 || _busy)
+        {
+            return;
+        }
+
+        _busy = true;
+        _message = null;
+        try
+        {
+            var created = await LabelService.CreateAsync(name);
+            if (created == null)
+            {
+                _message = $"Le label « {name} » existe déjà.";
+                return;
+            }
+
+            _newLabelName = string.Empty;
+            await ReloadAsync();
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
 
     private async Task ReloadAsync()
     {

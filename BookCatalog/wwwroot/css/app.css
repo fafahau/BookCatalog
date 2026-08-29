@@ -743,10 +743,16 @@ label {
     color: var(--text-muted);
 }
 
-.new-collection {
+.new-collection,
+.new-label {
     display: flex;
     gap: 0.5rem;
     margin-bottom: 1rem;
+}
+
+.new-label input {
+    flex: 1;
+    min-width: 0;
 }
 
 .collection-list {
