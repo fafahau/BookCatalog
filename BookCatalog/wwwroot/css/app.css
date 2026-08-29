@@ -668,12 +668,26 @@ label {
     margin: 0.5rem 0 1rem;
 }
 
-.view-toggle {
+.toolbar-toggles {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.view-toggle,
+.group-toggle {
     display: flex;
     gap: 0.25rem;
 }
 
-.view-toggle button.active {
+.view-toggle button,
+.group-toggle button {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+}
+
+.view-toggle button.active,
+.group-toggle button.active {
     background: var(--accent);
     color: #fff;
     border-color: var(--accent);
@@ -681,6 +695,51 @@ label {
 
 .add-book {
     margin-left: auto;
+}
+
+/* Grouped book view */
+
+.book-group {
+    margin-bottom: 1rem;
+}
+
+.book-group-header {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    padding: 0.4rem 0.2rem;
+    border-bottom: 2px solid var(--border);
+    font-weight: 600;
+    cursor: pointer;
+    list-style: none;
+}
+
+.book-group-header::-webkit-details-marker {
+    display: none;
+}
+
+.book-group-header::before {
+    content: "▸";
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.book-group[open] > .book-group-header::before {
+    content: "▾";
+}
+
+.book-group-count {
+    font-size: 0.8rem;
+    font-weight: 400;
+    color: var(--text-muted);
+}
+
+.book-group-count::before {
+    content: "(";
+}
+
+.book-group-count::after {
+    content: ")";
 }
 
 /* Book list view */
