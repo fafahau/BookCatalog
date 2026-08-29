@@ -21,7 +21,10 @@
 else
 {
     <div class="page-header">
-        <a class="back-link" href="@BackHref">&larr; Retour</a>
+        <a class="back-link" href="@BackHref">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+            Retour
+        </a>
         <h1>@(_isEdit ? "Modifier le livre" : "Nouveau livre") @(_collection != null ? $"— {_collection.Name}" : "")</h1>
         @if (_isEdit && _existingBook != null)
         {
@@ -32,133 +35,149 @@ else
         }
     </div>
 
-    <div class="isbn-lookup">
-        <input placeholder="ISBN (optionnel)" @bind="_isbn" @bind:event="oninput"/>
-        <button type="button" @onclick="LookupIsbnAsync" disabled="@(_isbnLookupBusy || string.IsNullOrWhiteSpace(_isbn))">
-            @(_isbnLookupBusy ? "Recherche..." : "Rechercher")
-        </button>
-        <button type="button" class="scan-toggle" @onclick="ToggleScanAsync" disabled="@_scanStarting">
-            @(_scanning ? "Fermer" : "Scanner")
-        </button>
-    </div>
+    <div class="book-form">
 
-    @if (_isbnLookupBusy)
-    {
-        <p class="form-info isbn-loading"><span class="spinner" aria-hidden="true"></span> Recherche des informations du livre…</p>
-    }
-
-    @if (_scanning)
-    {
-        <div class="barcode-scanner">
-            <video @ref="_scanVideo" muted autoplay playsinline></video>
-            <p class="form-info">Placez le code-barres ISBN dans le cadre.</p>
-        </div>
-    }
-    @if (!string.IsNullOrEmpty(_scanError))
-    {
-        <p class="form-error">@_scanError</p>
-    }
-    @if (!string.IsNullOrEmpty(_isbnMessage))
-    {
-        <p class="form-info">@_isbnMessage</p>
-    }
-
-    @* Outside the EditForm so pressing Enter adds a label instead of submitting. *@
-    <div class="label-field">
-        <span>Labels (optionnel)</span>
-        <div class="label-editor">
-            @foreach (var label in _labels)
-            {
-                <span class="label-chip">
-                    @label
-                    <button type="button" title="Retirer" @onclick="() => RemoveLabel(label)">&times;</button>
-                </span>
-            }
-            <input list="label-suggestions" autocomplete="off" placeholder="Ajouter un label"
-                   @bind="_labelDraft" @bind:event="oninput" @onkeydown="OnLabelKeyDown"/>
-            <button type="button" @onclick="AddLabelDraft" disabled="@string.IsNullOrWhiteSpace(_labelDraft)">Ajouter</button>
-        </div>
-        <datalist id="label-suggestions">
-            @foreach (var label in _allLabels)
-            {
-                <option value="@label"/>
-            }
-        </datalist>
-    </div>
-
-    <EditForm Model="this" OnValidSubmit="SaveAsync">
-        <label>
-            Titre
-            <input required @bind="_title" @bind:event="oninput"/>
-        </label>
-        <label>
-            Auteur
-            <input required list="author-suggestions" autocomplete="off" @bind="_author" @bind:event="oninput"/>
-        </label>
-        <datalist id="author-suggestions">
-            @foreach (var author in _authors)
-            {
-                <option value="@author"/>
-            }
-        </datalist>
-
-        <div class="photo-inputs">
-            <div class="photo-input">
-                <span>Photo 1</span>
-                @if (!string.IsNullOrEmpty(_photo1Preview))
-                {
-                    <img class="photo-preview zoomable" src="@_photo1Preview" alt="" @onclick="() => ImageViewer.Show(_photo1Preview)"/>
-                }
-                <div class="photo-actions">
-                    <label class="file-btn">
-                        <span>Fichier</span>
-                        <input type="file" accept="image/*" @ref="_photo1FileRef" @onchange="() => OnPhotoSelectedAsync(1, _photo1FileRef)"/>
-                    </label>
-                    <label class="file-btn">
-                        <span>📷 Photo</span>
-                        <input type="file" accept="image/*" capture="environment" @ref="_photo1CamRef" @onchange="() => OnPhotoSelectedAsync(1, _photo1CamRef)"/>
-                    </label>
-                    @if (!string.IsNullOrEmpty(_photo1Preview))
-                    {
-                        <button type="button" @onclick="() => CropAsync(1)">Recadrer</button>
-                    }
-                </div>
+        <div class="form-card">
+            <div class="form-card-title">Recherche par ISBN</div>
+            <div class="isbn-lookup">
+                <input placeholder="ISBN (optionnel)" @bind="_isbn" @bind:event="oninput"/>
+                <button type="button" @onclick="LookupIsbnAsync" disabled="@(_isbnLookupBusy || string.IsNullOrWhiteSpace(_isbn))">
+                    @(_isbnLookupBusy ? "Recherche..." : "Rechercher")
+                </button>
+                <button type="button" class="scan-toggle" @onclick="ToggleScanAsync" disabled="@_scanStarting">
+                    @(_scanning ? "Fermer" : "Scanner")
+                </button>
             </div>
-            <div class="photo-input">
-                <span>Photo 2</span>
-                @if (!string.IsNullOrEmpty(_photo2Preview))
-                {
-                    <img class="photo-preview zoomable" src="@_photo2Preview" alt="" @onclick="() => ImageViewer.Show(_photo2Preview)"/>
-                }
-                <div class="photo-actions">
-                    <label class="file-btn">
-                        <span>Fichier</span>
-                        <input type="file" accept="image/*" @ref="_photo2FileRef" @onchange="() => OnPhotoSelectedAsync(2, _photo2FileRef)"/>
-                    </label>
-                    <label class="file-btn">
-                        <span>📷 Photo</span>
-                        <input type="file" accept="image/*" capture="environment" @ref="_photo2CamRef" @onchange="() => OnPhotoSelectedAsync(2, _photo2CamRef)"/>
-                    </label>
-                    @if (!string.IsNullOrEmpty(_photo2Preview))
-                    {
-                        <button type="button" @onclick="() => CropAsync(2)">Recadrer</button>
-                    }
+
+            @if (_isbnLookupBusy)
+            {
+                <p class="form-info isbn-loading"><span class="spinner" aria-hidden="true"></span> Recherche des informations du livre…</p>
+            }
+
+            @if (_scanning)
+            {
+                <div class="barcode-scanner">
+                    <video @ref="_scanVideo" muted autoplay playsinline></video>
+                    <p class="form-info">Placez le code-barres ISBN dans le cadre.</p>
                 </div>
+            }
+            @if (!string.IsNullOrEmpty(_scanError))
+            {
+                <p class="form-error">@_scanError</p>
+            }
+            @if (!string.IsNullOrEmpty(_isbnMessage))
+            {
+                <p class="form-info">@_isbnMessage</p>
+            }
+        </div>
+
+        @* Outside the EditForm so pressing Enter adds a label instead of submitting. *@
+        <div class="form-card">
+            <div class="label-field">
+                <span>Labels (optionnel)</span>
+                <div class="label-editor">
+                    @foreach (var label in _labels)
+                    {
+                        <span class="label-chip">
+                            @label
+                            <button type="button" title="Retirer" @onclick="() => RemoveLabel(label)">&times;</button>
+                        </span>
+                    }
+                    <input list="label-suggestions" autocomplete="off" placeholder="Ajouter un label"
+                           @bind="_labelDraft" @bind:event="oninput" @onkeydown="OnLabelKeyDown"/>
+                    <button type="button" @onclick="AddLabelDraft" disabled="@string.IsNullOrWhiteSpace(_labelDraft)">Ajouter</button>
+                </div>
+                <datalist id="label-suggestions">
+                    @foreach (var label in _allLabels)
+                    {
+                        <option value="@label"/>
+                    }
+                </datalist>
             </div>
         </div>
 
-        @if (!string.IsNullOrEmpty(_cropMessage))
-        {
-            <p class="form-info">@_cropMessage</p>
-        }
+        <EditForm Model="this" OnValidSubmit="SaveAsync">
+            <div class="form-card">
+                <div class="form-card-title">Détails</div>
+                <label>
+                    Titre
+                    <input required @bind="_title" @bind:event="oninput"/>
+                </label>
+                <label>
+                    Auteur
+                    <input required list="author-suggestions" autocomplete="off" @bind="_author" @bind:event="oninput"/>
+                </label>
+                <datalist id="author-suggestions">
+                    @foreach (var author in _authors)
+                    {
+                        <option value="@author"/>
+                    }
+                </datalist>
+            </div>
 
-        @if (!string.IsNullOrEmpty(_error))
-        {
-            <p class="form-error">@_error</p>
-        }
+            <div class="form-card">
+                <div class="form-card-title">Couvertures</div>
+                <div class="photo-inputs">
+                    <div class="photo-input">
+                        <span>Photo 1</span>
+                        @if (!string.IsNullOrEmpty(_photo1Preview))
+                        {
+                            <img class="photo-preview zoomable" src="@_photo1Preview" alt="" @onclick="() => ImageViewer.Show(_photo1Preview)"/>
+                        }
+                        <div class="photo-actions">
+                            <label class="file-btn">
+                                <span>Fichier</span>
+                                <input type="file" accept="image/*" @ref="_photo1FileRef" @onchange="() => OnPhotoSelectedAsync(1, _photo1FileRef)"/>
+                            </label>
+                            <label class="file-btn">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                                <span>Photo</span>
+                                <input type="file" accept="image/*" capture="environment" @ref="_photo1CamRef" @onchange="() => OnPhotoSelectedAsync(1, _photo1CamRef)"/>
+                            </label>
+                            @if (!string.IsNullOrEmpty(_photo1Preview))
+                            {
+                                <button type="button" @onclick="() => CropAsync(1)">Recadrer</button>
+                            }
+                        </div>
+                    </div>
+                    <div class="photo-input">
+                        <span>Photo 2</span>
+                        @if (!string.IsNullOrEmpty(_photo2Preview))
+                        {
+                            <img class="photo-preview zoomable" src="@_photo2Preview" alt="" @onclick="() => ImageViewer.Show(_photo2Preview)"/>
+                        }
+                        <div class="photo-actions">
+                            <label class="file-btn">
+                                <span>Fichier</span>
+                                <input type="file" accept="image/*" @ref="_photo2FileRef" @onchange="() => OnPhotoSelectedAsync(2, _photo2FileRef)"/>
+                            </label>
+                            <label class="file-btn">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                                <span>Photo</span>
+                                <input type="file" accept="image/*" capture="environment" @ref="_photo2CamRef" @onchange="() => OnPhotoSelectedAsync(2, _photo2CamRef)"/>
+                            </label>
+                            @if (!string.IsNullOrEmpty(_photo2Preview))
+                            {
+                                <button type="button" @onclick="() => CropAsync(2)">Recadrer</button>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-        <button type="submit" class="primary" disabled="@_saving">@(_saving ? "Enregistrement..." : "Enregistrer")</button>
-    </EditForm>
+            @if (!string.IsNullOrEmpty(_cropMessage))
+            {
+                <p class="form-info">@_cropMessage</p>
+            }
+
+            @if (!string.IsNullOrEmpty(_error))
+            {
+                <p class="form-error">@_error</p>
+            }
+
+            <button type="submit" class="primary" disabled="@_saving">@(_saving ? "Enregistrement..." : "Enregistrer")</button>
+        </EditForm>
+    </div>
 }
 
 @code {
