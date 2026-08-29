@@ -77,15 +77,17 @@ else
     </details>
 
     <div class="toolbar">
-        <div class="view-toggle">
-            <button class="@(_viewMode == ViewMode.List ? "active" : "")" @onclick='() => SetViewMode(ViewMode.List)'>☰ Liste</button>
-            <button class="@(_viewMode == ViewMode.Tile ? "active" : "")" @onclick='() => SetViewMode(ViewMode.Tile)'>▦ Tuiles</button>
-        </div>
+        <div class="toolbar-toggles">
+            <div class="view-toggle">
+                <button class="@(_viewMode == ViewMode.List ? "active" : "")" @onclick='() => SetViewMode(ViewMode.List)'>☰ Liste</button>
+                <button class="@(_viewMode == ViewMode.Tile ? "active" : "")" @onclick='() => SetViewMode(ViewMode.Tile)'>▦ Tuiles</button>
+            </div>
 
-        <div class="group-toggle">
-            <button class="@(_groupMode == GroupMode.None ? "active" : "")" @onclick="() => SetGroupMode(GroupMode.None)">Aucun</button>
-            <button class="@(_groupMode == GroupMode.Label ? "active" : "")" @onclick="() => SetGroupMode(GroupMode.Label)">Par label</button>
-            <button class="@(_groupMode == GroupMode.Author ? "active" : "")" @onclick="() => SetGroupMode(GroupMode.Author)">Par auteur</button>
+            <div class="group-toggle">
+                <button class="@(_groupMode == GroupMode.None ? "active" : "")" @onclick="() => SetGroupMode(GroupMode.None)">Aucun</button>
+                <button class="@(_groupMode == GroupMode.Label ? "active" : "")" @onclick="() => SetGroupMode(GroupMode.Label)">Par label</button>
+                <button class="@(_groupMode == GroupMode.Author ? "active" : "")" @onclick="() => SetGroupMode(GroupMode.Author)">Par auteur</button>
+            </div>
         </div>
 
         <AuthorizeView Roles="admin" Context="adminContext">

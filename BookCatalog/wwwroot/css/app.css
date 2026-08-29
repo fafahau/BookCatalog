@@ -668,10 +668,22 @@ label {
     margin: 0.5rem 0 1rem;
 }
 
+.toolbar-toggles {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
 .view-toggle,
 .group-toggle {
     display: flex;
     gap: 0.25rem;
+}
+
+.view-toggle button,
+.group-toggle button {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
 }
 
 .view-toggle button.active,
