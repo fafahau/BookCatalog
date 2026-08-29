@@ -15,6 +15,7 @@ builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.
 // (needed by LocalStorageSessionPersistence) is safe here.
 builder.Services.AddSingleton(sp => (IJSInProcessRuntime)sp.GetRequiredService<IJSRuntime>());
 builder.Services.AddSingleton<LocalStorageSessionPersistence>();
+builder.Services.AddSingleton<UiStateStore>();
 builder.Services.AddSingleton<SupabaseService>();
 builder.Services.AddSingleton<AuthService>();
 builder.Services.AddSingleton<ImageUploadService>();
