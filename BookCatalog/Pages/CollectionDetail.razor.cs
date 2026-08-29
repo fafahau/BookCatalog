@@ -52,12 +52,24 @@ public partial class CollectionDetail
         public ViewMode View { get; set; }
         public GroupMode Group { get; set; }
         public int PageSize { get; set; } = 20;
+        public bool GroupsExpanded { get; set; } = true;
     }
 
     // Initial expand state only: true when restored filters would otherwise be
     // hidden. Never reassigned, so Blazor's diff leaves the attribute alone
     // after the first render and the user's own open/close clicks stick.
     private bool _filtersOpen;
+
+    // Drives the "open" attribute of every group's <details>. Reassigned only by
+    // the expand/collapse switch, so between clicks Blazor leaves each group
+    // alone and the user's own per-group toggles stick.
+    private bool _groupsExpanded = true;
+
+    private bool HasActiveFilters =>
+        !string.IsNullOrWhiteSpace(_filter.Title)
+        || !string.IsNullOrWhiteSpace(_filter.Author)
+        || !string.IsNullOrWhiteSpace(_filter.Label)
+        || _filter.Sort != BookSort.Recent;
 
     private bool _isbnSearching;
     private bool _isbnSearched;
@@ -98,11 +110,9 @@ public partial class CollectionDetail
         _viewMode = s.View;
         _groupMode = s.Group;
         _pageSize = s.PageSize is 20 or 40 or 60 ? s.PageSize : 20;
+        _groupsExpanded = s.GroupsExpanded;
 
-        _filtersOpen = !string.IsNullOrWhiteSpace(_filter.Title)
-            || !string.IsNullOrWhiteSpace(_filter.Author)
-            || !string.IsNullOrWhiteSpace(_filter.Label)
-            || _filter.Sort != BookSort.Recent;
+        _filtersOpen = HasActiveFilters;
     }
 
     private void PersistState() => UiState.Set(StateKey, new ViewState
@@ -114,6 +124,7 @@ public partial class CollectionDetail
         View = _viewMode,
         Group = _groupMode,
         PageSize = _pageSize,
+        GroupsExpanded = _groupsExpanded,
     });
 
     private void SetViewMode(ViewMode mode)
@@ -149,6 +160,21 @@ public partial class CollectionDetail
         _groupMode = mode;
         RebuildGroups();
         PersistState();
+    }
+
+    private void SetGroupsExpanded(bool expanded)
+    {
+        _groupsExpanded = expanded;
+        PersistState();
+    }
+
+    private async Task ClearFiltersAsync()
+    {
+        _filter.Title = null;
+        _filter.Author = null;
+        _filter.Label = null;
+        _filter.Sort = BookSort.Recent;
+        await ReloadBooksAsync();
     }
 
     private async Task ReloadBooksAsync()

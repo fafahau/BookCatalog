@@ -919,6 +919,31 @@ label {
     flex: 1;
 }
 
+.clear-filters {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    align-self: flex-start;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-muted);
+    border-radius: 999px;
+    padding: 0.32rem 0.8rem;
+    font-size: 0.8rem;
+    font-weight: 500;
+    box-shadow: none;
+}
+
+.clear-filters:hover:not(:disabled) {
+    color: var(--text);
+    border-color: var(--text-muted);
+}
+
+.clear-filters:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
 .toolbar {
     display: flex;
     align-items: center;
