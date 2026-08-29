@@ -22,6 +22,18 @@ public class CollectionService
         return result.Models;
     }
 
+    /// <summary>Number of books in each collection, keyed by collection id.</summary>
+    public async Task<Dictionary<Guid, int>> GetBookCountsAsync()
+    {
+        var result = await _client.From<Book>()
+            .Select("collection_id")
+            .Get();
+
+        return result.Models
+            .GroupBy(b => b.CollectionId)
+            .ToDictionary(g => g.Key, g => g.Count());
+    }
+
     public async Task<BookCollection?> GetByIdAsync(Guid id)
     {
         return await _client.From<BookCollection>()

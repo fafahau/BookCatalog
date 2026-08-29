@@ -597,6 +597,26 @@ label {
     font-weight: 600;
 }
 
+.collection-count {
+    flex: none;
+    min-width: 1.5rem;
+    padding: 0.1rem 0.5rem;
+    border-radius: 999px;
+    background: var(--border);
+    color: var(--text);
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-align: center;
+}
+
+.collection-percent {
+    flex: none;
+    min-width: 3rem;
+    color: var(--text-muted, #6b7280);
+    font-size: 0.8rem;
+    text-align: right;
+}
+
 /* Collection detail: filters + toggle */
 
 .page-header {
@@ -675,22 +695,46 @@ label {
 }
 
 .view-toggle,
-.group-toggle {
+.group-toggle,
+.page-toggle {
     display: flex;
+    align-items: center;
     gap: 0.25rem;
 }
 
 .view-toggle button,
-.group-toggle button {
+.group-toggle button,
+.page-toggle button {
     padding: 0.25rem 0.5rem;
     font-size: 0.8rem;
 }
 
 .view-toggle button.active,
-.group-toggle button.active {
+.group-toggle button.active,
+.page-toggle button.active {
     background: var(--accent);
     color: #fff;
     border-color: var(--accent);
+}
+
+.page-size-select {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.8rem;
+}
+
+.pager {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    margin: 1rem 0;
+}
+
+.pager-status {
+    font-size: 0.85rem;
+    color: var(--text-muted, #6b7280);
 }
 
 .add-book {
