@@ -1137,3 +1137,50 @@ label {
     right: 0.75rem;
     z-index: 10;
 }
+
+/* Confirmation modal */
+
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 3000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.modal {
+    width: 100%;
+    max-width: 26rem;
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.25rem;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
+}
+
+.modal-title {
+    margin: 0 0 0.5rem;
+    font-size: 1.1rem;
+}
+
+.modal-message {
+    margin: 0 0 1.25rem;
+    color: var(--text-soft);
+    line-height: 1.45;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+}
+
+.modal-actions button.danger {
+    background: var(--danger);
+    border-color: var(--danger);
+    color: #fff;
+}

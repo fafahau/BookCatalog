@@ -3,7 +3,7 @@
 @inject CollectionService CollectionService
 @inject AuthService AuthService
 @inject NavigationManager Navigation
-@inject IJSRuntime JS
+@inject ConfirmService Confirm
 
 <PageTitle>Collections</PageTitle>
 
@@ -114,7 +114,9 @@ else
 
     private async Task DeleteAsync(BookCollection collection)
     {
-        var confirmed = await JS.InvokeAsync<bool>("confirm", $"Supprimer la collection \"{collection.Name}\" et tous ses livres ?");
+        var confirmed = await Confirm.ConfirmAsync(
+            $"Supprimer la collection « {collection.Name} » et tous ses livres ?",
+            title: "Supprimer la collection");
         if (!confirmed)
         {
             return;

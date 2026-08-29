@@ -1,0 +1,26 @@
+@implements IDisposable
+@inject ConfirmService Confirm
+
+@if (Confirm.Current is { } request)
+{
+    <div class="modal-overlay" @onclick="() => request.Complete(false)">
+        <div class="modal" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title"
+             @onclick:stopPropagation="true">
+            <h2 id="confirm-title" class="modal-title">@request.Title</h2>
+            <p class="modal-message">@request.Message</p>
+            <div class="modal-actions">
+                <button type="button" @onclick="() => request.Complete(false)">@request.CancelLabel</button>
+                <button type="button" class="@(request.Danger ? "danger" : "primary")"
+                        @onclick="() => request.Complete(true)">@request.ConfirmLabel</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    protected override void OnInitialized() => Confirm.OnChange += Refresh;
+
+    private void Refresh() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Confirm.OnChange -= Refresh;
+}

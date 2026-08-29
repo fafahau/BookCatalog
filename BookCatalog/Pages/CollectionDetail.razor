@@ -5,7 +5,7 @@
 @inject LabelService LabelService
 @inject AuthService AuthService
 @inject NavigationManager Navigation
-@inject IJSRuntime JS
+@inject ConfirmService Confirm
 
 <PageTitle>@(_collection?.Name ?? "Collection")</PageTitle>
 
@@ -228,7 +228,9 @@ else
 
     private async Task DeleteBookAsync(Book book)
     {
-        var confirmed = await JS.InvokeAsync<bool>("confirm", $"Supprimer \"{book.Title}\" ?");
+        var confirmed = await Confirm.ConfirmAsync(
+            $"Supprimer le livre « {book.Title} » ?",
+            title: "Supprimer le livre");
         if (!confirmed)
         {
             return;
