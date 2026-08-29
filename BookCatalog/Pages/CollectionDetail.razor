@@ -6,6 +6,7 @@
 @inject AuthService AuthService
 @inject NavigationManager Navigation
 @inject ConfirmService Confirm
+@inject UiStateStore UiState
 
 <PageTitle>@(_collection?.Name ?? "Collection")</PageTitle>
 
@@ -27,7 +28,7 @@ else
         <h1>@_collection.Name</h1>
     </div>
 
-    <details class="filters-accordion">
+    <details class="filters-accordion" open="@_filtersOpen" @ontoggle="() => _filtersOpen = !_filtersOpen">
         <summary>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-2px; margin-right:0.35rem;"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>
             Filtres
@@ -226,6 +227,25 @@ else
     private sealed record BookGroup(string Name, List<Book> Books);
     private List<BookGroup> _groupedBooks = new();
 
+    // Filters + view toggles are remembered across navigation and reloads
+    // (localStorage) until the user changes them.
+    private const string StateKey = "collection-view";
+
+    private sealed class ViewState
+    {
+        public string? Title { get; set; }
+        public string? Author { get; set; }
+        public string? Label { get; set; }
+        public BookSort Sort { get; set; }
+        public ViewMode View { get; set; }
+        public GroupMode Group { get; set; }
+        public int PageSize { get; set; } = 20;
+    }
+
+    // Start expanded when restored filters would otherwise be hidden; the
+    // @ontoggle handler keeps this in sync with the user's clicks afterwards.
+    private bool _filtersOpen;
+
     private bool _isbnSearching;
     private bool _isbnSearched;
     private List<Book> _isbnHere = new();
@@ -233,6 +253,8 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        RestoreState();
+
         _collection = await CollectionService.GetByIdAsync(Id);
         _loading = false;
 
@@ -248,9 +270,50 @@ else
         await ReloadBooksAsync();
     }
 
-    private void SetViewMode(ViewMode mode) => _viewMode = mode;
+    private void RestoreState()
+    {
+        var s = UiState.Get<ViewState>(StateKey);
+        if (s == null)
+        {
+            return;
+        }
 
-    private void OnPageSizeChanged() => _currentPage = 1;
+        _filter.Title = s.Title;
+        _filter.Author = s.Author;
+        _filter.Label = s.Label;
+        _filter.Sort = s.Sort;
+        _viewMode = s.View;
+        _groupMode = s.Group;
+        _pageSize = s.PageSize is 20 or 40 or 60 ? s.PageSize : 20;
+
+        _filtersOpen = !string.IsNullOrWhiteSpace(_filter.Title)
+            || !string.IsNullOrWhiteSpace(_filter.Author)
+            || !string.IsNullOrWhiteSpace(_filter.Label)
+            || _filter.Sort != BookSort.Recent;
+    }
+
+    private void PersistState() => UiState.Set(StateKey, new ViewState
+    {
+        Title = _filter.Title,
+        Author = _filter.Author,
+        Label = _filter.Label,
+        Sort = _filter.Sort,
+        View = _viewMode,
+        Group = _groupMode,
+        PageSize = _pageSize,
+    });
+
+    private void SetViewMode(ViewMode mode)
+    {
+        _viewMode = mode;
+        PersistState();
+    }
+
+    private void OnPageSizeChanged()
+    {
+        _currentPage = 1;
+        PersistState();
+    }
 
     private void PrevPage()
     {
@@ -272,10 +335,12 @@ else
     {
         _groupMode = mode;
         RebuildGroups();
+        PersistState();
     }
 
     private async Task ReloadBooksAsync()
     {
+        PersistState();
         _booksLoading = true;
         _books = await BookService.GetByCollectionAsync(Id, _filter);
         _booksLoading = false;
