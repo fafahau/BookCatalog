@@ -24,11 +24,3 @@
         </nav>
     </Authorized>
 </AuthorizeView>
-
-@code {
-    private async Task LogoutAsync()
-    {
-        await AuthService.LogoutAsync();
-        Navigation.NavigateTo("login");
-    }
-}

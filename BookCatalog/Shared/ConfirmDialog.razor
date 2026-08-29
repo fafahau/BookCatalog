@@ -16,11 +16,3 @@
         </div>
     </div>
 }
-
-@code {
-    protected override void OnInitialized() => Confirm.OnChange += Refresh;
-
-    private void Refresh() => InvokeAsync(StateHasChanged);
-
-    public void Dispose() => Confirm.OnChange -= Refresh;
-}

@@ -19,16 +19,16 @@
             <label>
                 Email
                 <div class="input-icon">
-                    @MailIcon
+                    <FieldIcon Kind="mail"/>
                     <InputText @bind-Value="_model.Email" type="email" autocomplete="username"/>
                 </div>
             </label>
             <label>
                 Mot de passe
                 <div class="password-field">
-                    @LockIcon
+                    <FieldIcon Kind="lock"/>
                     <InputText @bind-Value="_model.Password" type="@PasswordInputType" autocomplete="current-password"/>
-                    @PasswordToggleButton
+                    <PasswordToggle Visible="_showPassword" OnToggle="ToggleShowPassword"/>
                 </div>
             </label>
 
@@ -54,7 +54,7 @@
             <label>
                 Email
                 <div class="input-icon">
-                    @MailIcon
+                    <FieldIcon Kind="mail"/>
                     <InputText @bind-Value="_model.Email" type="email" autocomplete="username"/>
                 </div>
             </label>
@@ -82,23 +82,23 @@
             <label>
                 Nom affiché
                 <div class="input-icon">
-                    @UserIcon
+                    <FieldIcon Kind="user"/>
                     <InputText @bind-Value="_model.DisplayName" autocomplete="name"/>
                 </div>
             </label>
             <label>
                 Email
                 <div class="input-icon">
-                    @MailIcon
+                    <FieldIcon Kind="mail"/>
                     <InputText @bind-Value="_model.Email" type="email" autocomplete="username"/>
                 </div>
             </label>
             <label>
                 Mot de passe (6 caractères min.)
                 <div class="password-field">
-                    @LockIcon
+                    <FieldIcon Kind="lock"/>
                     <InputText @bind-Value="_model.Password" type="@PasswordInputType" autocomplete="new-password"/>
-                    @PasswordToggleButton
+                    <PasswordToggle Visible="_showPassword" OnToggle="ToggleShowPassword"/>
                 </div>
             </label>
 
@@ -120,139 +120,3 @@
         <p class="hint">Un nouveau compte est en lecture seule par défaut ; un administrateur doit ensuite vous accorder les droits d'édition.</p>
     }
 </div>
-
-@code {
-    private enum Mode { Login, Register, ForgotPassword }
-    private Mode _mode = Mode.Login;
-    private readonly Credentials _model = new();
-    private string? _error;
-    private string? _info;
-    private bool _busy;
-    private bool _showPassword;
-
-    private string PasswordInputType => _showPassword ? "text" : "password";
-
-    private void ToggleShowPassword() => _showPassword = !_showPassword;
-
-    private static readonly RenderFragment MailIcon = @<svg class="field-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <rect x="2" y="4" width="20" height="16" rx="2"/>
-        <path d="M22 6l-10 7L2 6"/>
-    </svg>;
-
-    private static readonly RenderFragment LockIcon = @<svg class="field-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <rect x="3" y="11" width="18" height="10" rx="2"/>
-        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-    </svg>;
-
-    private static readonly RenderFragment UserIcon = @<svg class="field-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <circle cx="12" cy="8" r="4"/>
-        <path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/>
-    </svg>;
-
-    private RenderFragment PasswordToggleButton => @<button type="button" class="password-toggle"
-                                                           @onclick="ToggleShowPassword"
-                                                           aria-label="@(_showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe")"
-                                                           title="@(_showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe")">
-        @if (_showPassword)
-        {
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
-                <line x1="1" y1="1" x2="23" y2="23"/>
-            </svg>
-        }
-        else
-        {
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/>
-                <circle cx="12" cy="12" r="3"/>
-            </svg>
-        }
-    </button>;
-
-    private void SwitchMode(Mode mode)
-    {
-        _mode = mode;
-        _error = null;
-        _info = null;
-        _showPassword = false;
-    }
-
-    private async Task LoginAsync()
-    {
-        _busy = true;
-        _error = null;
-        var error = await AuthService.LoginAsync(_model.Email, _model.Password);
-        _busy = false;
-
-        if (error == null)
-        {
-            Navigation.NavigateTo("");
-        }
-        else
-        {
-            _error = error;
-        }
-    }
-
-    private async Task SendResetAsync()
-    {
-        if (string.IsNullOrWhiteSpace(_model.Email))
-        {
-            _error = "Saisissez votre adresse email.";
-            _info = null;
-            return;
-        }
-
-        _busy = true;
-        _error = null;
-        _info = null;
-        var redirectTo = Navigation.ToAbsoluteUri("reset-password").ToString();
-        var error = await AuthService.SendPasswordResetAsync(_model.Email, redirectTo);
-        _busy = false;
-
-        if (error == null)
-        {
-            _info = "Si un compte existe pour cette adresse, un email de réinitialisation vient d'être envoyé. Suivez le lien qu'il contient pour choisir un nouveau mot de passe.";
-        }
-        else
-        {
-            _error = error;
-        }
-    }
-
-    private async Task RegisterAsync()
-    {
-        _busy = true;
-        _error = null;
-        _info = null;
-        var (success, needsEmailConfirmation, error) = await AuthService.RegisterAsync(_model.Email, _model.Password, _model.DisplayName);
-        _busy = false;
-
-        if (!success)
-        {
-            _error = error;
-        }
-        else if (needsEmailConfirmation)
-        {
-            _info = "Compte créé. Vérifiez votre boîte mail pour confirmer votre adresse avant de vous connecter.";
-            _mode = Mode.Login;
-        }
-        else
-        {
-            Navigation.NavigateTo("");
-        }
-    }
-
-    private class Credentials
-    {
-        [System.ComponentModel.DataAnnotations.Required]
-        [System.ComponentModel.DataAnnotations.EmailAddress]
-        public string Email { get; set; } = string.Empty;
-
-        [System.ComponentModel.DataAnnotations.Required]
-        [System.ComponentModel.DataAnnotations.MinLength(6)]
-        public string Password { get; set; } = string.Empty;
-
-        public string DisplayName { get; set; } = string.Empty;
-    }
-}
