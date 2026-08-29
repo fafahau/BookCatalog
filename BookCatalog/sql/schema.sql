@@ -49,6 +49,16 @@ alter table public.profiles drop constraint if exists profiles_role_check;
 alter table public.profiles
     add constraint profiles_role_check check (role in ('superadmin', 'admin', 'readonly'));
 
+-- last_sign_in_at: mirror of auth.users.last_sign_in_at, kept fresh by the
+-- on_auth_user_sign_in trigger (section 2c). The auth schema isn't exposed to
+-- the client, so the Users screen reads this copy instead. Added after the
+-- initial release: nullable, backfilled from auth.users below.
+alter table public.profiles add column if not exists last_sign_in_at timestamptz;
+update public.profiles p
+    set last_sign_in_at = u.last_sign_in_at
+    from auth.users u
+    where u.id = p.id and p.last_sign_in_at is null;
+
 -- Free-form labels/tags (added after the initial release). A label is a shared
 -- row; books and labels have a many-to-many link via book_labels (each book
 -- carries 0-N labels).
@@ -94,6 +104,34 @@ drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
     after insert on auth.users
     for each row execute procedure public.handle_new_user();
+
+-- ============================================================
+-- 2c. Mirror auth.users.last_sign_in_at into public.profiles on every sign-in
+--     (the auth schema is not exposed via the REST API, so Users.razor can't
+--     read it directly). last_sign_in_at only changes on an actual sign-in,
+--     not on token refreshes.
+-- ============================================================
+
+create or replace function public.handle_user_sign_in()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+    if new.last_sign_in_at is distinct from old.last_sign_in_at then
+        update public.profiles
+            set last_sign_in_at = new.last_sign_in_at
+            where id = new.id;
+    end if;
+    return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_sign_in on auth.users;
+create trigger on_auth_user_sign_in
+    after update on auth.users
+    for each row execute procedure public.handle_user_sign_in();
 
 -- ============================================================
 -- 2b. Keep books.updated_at fresh:

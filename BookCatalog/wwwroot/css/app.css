@@ -1494,17 +1494,23 @@ label {
 .user-row {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 0.75rem;
-    padding: 0.75rem 0.9rem;
+    padding: 0.85rem 1rem;
     border-bottom: 1px solid var(--border);
+    transition: background-color 0.15s ease;
 }
 
 .user-row:last-child {
     border-bottom: none;
 }
 
+.user-row:hover {
+    background: var(--surface-alt);
+}
+
 .user-info {
-    flex: 1;
+    flex: 1 1 12rem;
     min-width: 0;
 }
 
@@ -1515,8 +1521,28 @@ label {
 .user-id {
     font-size: 0.75rem;
     color: var(--text-faint);
+    white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+.user-meta {
+    font-size: 0.78rem;
+    color: var(--text-faint);
+    margin-top: 0.2rem;
+}
+
+.user-row select {
+    /* Override the generic input/select width:100% rule: this is a flex
+       item, not a block field, and must size to its own content instead
+       of claiming the whole row (which used to crush .user-info to 0). */
+    width: auto;
+    flex: 0 0 auto;
+    margin-top: 0;
+}
+
+.user-row button.icon-button {
+    flex: 0 0 auto;
 }
 
 .access-denied {
