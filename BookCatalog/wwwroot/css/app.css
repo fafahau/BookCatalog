@@ -683,6 +683,51 @@ label {
     margin-left: auto;
 }
 
+/* Grouped book view */
+
+.book-group {
+    margin-bottom: 1rem;
+}
+
+.book-group-header {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    padding: 0.4rem 0.2rem;
+    border-bottom: 2px solid var(--border);
+    font-weight: 600;
+    cursor: pointer;
+    list-style: none;
+}
+
+.book-group-header::-webkit-details-marker {
+    display: none;
+}
+
+.book-group-header::before {
+    content: "▸";
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.book-group[open] > .book-group-header::before {
+    content: "▾";
+}
+
+.book-group-count {
+    font-size: 0.8rem;
+    font-weight: 400;
+    color: var(--text-muted);
+}
+
+.book-group-count::before {
+    content: "(";
+}
+
+.book-group-count::after {
+    content: ")";
+}
+
 /* Book list view */
 
 .book-list {

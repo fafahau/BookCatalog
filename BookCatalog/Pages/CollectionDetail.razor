@@ -44,6 +44,14 @@ else
                     <option value="@BookSort.TitleDesc">Titre (Z → A)</option>
                 </select>
             </label>
+            <label class="sort-select">
+                Grouper par
+                <select @bind="_groupMode" @bind:after="RebuildGroups">
+                    <option value="@GroupMode.None">Aucun</option>
+                    <option value="@GroupMode.Label">Label</option>
+                    <option value="@GroupMode.Author">Auteur</option>
+                </select>
+            </label>
         </div>
 
         <div class="isbn-lookup-panel">
@@ -97,42 +105,65 @@ else
     {
         <p class="empty-state">Aucun livre ne correspond.</p>
     }
-    else if (_viewMode == ViewMode.List)
+    else if (_groupMode == GroupMode.None)
     {
-        <ul class="book-list">
-            @foreach (var book in _books)
-            {
-                <li class="book-row">
-                    <BookListItem Book="book" OnClick="() => OpenBook(book)"/>
-                    <AuthorizeView Roles="admin" Context="rowAdminContext">
-                        <Authorized>
-                            <button class="icon-button danger" title="Supprimer" @onclick="() => DeleteBookAsync(book)">🗑</button>
-                        </Authorized>
-                    </AuthorizeView>
-                </li>
-            }
-        </ul>
+        @RenderBooks(_books)
     }
     else
     {
-        <div class="book-tile-grid">
-            @foreach (var book in _books)
-            {
-                <div class="book-tile-wrapper">
-                    <BookTile Book="book" OnClick="() => OpenBook(book)"/>
-                    <AuthorizeView Roles="admin" Context="tileAdminContext">
-                        <Authorized>
-                            <button class="icon-button danger tile-delete" title="Supprimer" @onclick="() => DeleteBookAsync(book)">🗑</button>
-                        </Authorized>
-                    </AuthorizeView>
-                </div>
-            }
-        </div>
+        @foreach (var group in _groupedBooks)
+        {
+            <details class="book-group" open>
+                <summary class="book-group-header">
+                    <span class="book-group-name">@group.Name</span>
+                    <span class="book-group-count">@group.Books.Count</span>
+                </summary>
+                @RenderBooks(group.Books)
+            </details>
+        }
     }
 }
 
 @code {
+    private RenderFragment RenderBooks(IReadOnlyList<Book> books) =>@<text>
+        @if (_viewMode == ViewMode.List)
+        {
+            <ul class="book-list">
+                @foreach (var book in books)
+                {
+                    <li class="book-row">
+                        <BookListItem Book="book" OnClick="@(() => OpenBook(book))"/>
+                        <AuthorizeView Roles="admin" Context="rowAdminContext">
+                            <Authorized>
+                                <button class="icon-button danger" title="Supprimer" @onclick="@(() => DeleteBookAsync(book))">🗑</button>
+                            </Authorized>
+                        </AuthorizeView>
+                    </li>
+                }
+            </ul>
+        }
+        else
+        {
+            <div class="book-tile-grid">
+                @foreach (var book in books)
+                {
+                    <div class="book-tile-wrapper">
+                        <BookTile Book="book" OnClick="@(() => OpenBook(book))"/>
+                        <AuthorizeView Roles="admin" Context="tileAdminContext">
+                            <Authorized>
+                                <button class="icon-button danger tile-delete" title="Supprimer" @onclick="@(() => DeleteBookAsync(book))">🗑</button>
+                            </Authorized>
+                        </AuthorizeView>
+                    </div>
+                }
+            </div>
+        }
+    </text>;
+}
+
+@code {
     private enum ViewMode { List, Tile }
+    private enum GroupMode { None, Label, Author }
 
     [Parameter]
     public Guid Id { get; set; }
@@ -142,8 +173,15 @@ else
     private bool _loading = true;
     private bool _booksLoading = true;
     private ViewMode _viewMode = ViewMode.List;
+    private GroupMode _groupMode = GroupMode.None;
     private readonly BookFilter _filter = new();
     private List<string> _allLabels = new();
+
+    private const string NoLabel = "Sans label";
+    private const string NoAuthor = "Sans auteur";
+
+    private sealed record BookGroup(string Name, List<Book> Books);
+    private List<BookGroup> _groupedBooks = new();
 
     private bool _isbnSearching;
     private bool _isbnSearched;
@@ -174,7 +212,52 @@ else
         _booksLoading = true;
         _books = await BookService.GetByCollectionAsync(Id, _filter);
         _booksLoading = false;
+        RebuildGroups();
         StateHasChanged();
+    }
+
+    /// <summary>
+    /// Buckets <see cref="_books"/> by label or author. A book with several labels
+    /// lands in each of its groups; books missing the key go in a "Sans …" group
+    /// that sorts last. Books keep the order set by the current sort.
+    /// </summary>
+    private void RebuildGroups()
+    {
+        if (_groupMode == GroupMode.None)
+        {
+            _groupedBooks = new();
+            return;
+        }
+
+        var placeholder = _groupMode == GroupMode.Label ? NoLabel : NoAuthor;
+        var groups = new Dictionary<string, List<Book>>(StringComparer.CurrentCultureIgnoreCase);
+
+        foreach (var book in _books)
+        {
+            IEnumerable<string> keys = _groupMode switch
+            {
+                GroupMode.Label => book.LabelNames is { Count: > 0 }
+                    ? book.LabelNames
+                    : new List<string> { placeholder },
+                _ => new List<string> { string.IsNullOrWhiteSpace(book.Author) ? placeholder : book.Author.Trim() }
+            };
+
+            foreach (var key in keys)
+            {
+                if (!groups.TryGetValue(key, out var bucket))
+                {
+                    bucket = new();
+                    groups[key] = bucket;
+                }
+                bucket.Add(book);
+            }
+        }
+
+        _groupedBooks = groups
+            .OrderBy(g => g.Key == placeholder ? 1 : 0)
+            .ThenBy(g => g.Key, StringComparer.CurrentCultureIgnoreCase)
+            .Select(g => new BookGroup(g.Key, g.Value))
+            .ToList();
     }
 
     private async Task IsbnSearchAsync(string isbn)
