@@ -76,6 +76,20 @@ public class BookService
     }
 
     /// <summary>
+    /// Creation timestamps of every book in the collection. Bucketing by day is left
+    /// to the caller. Used by the admin-only "calendrier des ajouts".
+    /// </summary>
+    public async Task<List<DateTime>> GetCreatedAtByCollectionAsync(Guid collectionId)
+    {
+        var result = await _client.From<Book>()
+            .Select("created_at")
+            .Filter("collection_id", Constants.Operator.Equals, collectionId.ToString())
+            .Get();
+
+        return result.Models.Select(b => b.CreatedAt).ToList();
+    }
+
+    /// <summary>
     /// Finds every book whose ISBN matches <paramref name="isbn"/>, across all collections,
     /// regardless of the caller's role (books are readable by any signed-in user).
     /// Comparison is done on digits only so hyphenated / scanned forms all match.
