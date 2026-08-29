@@ -126,6 +126,38 @@ public class BookService
         return result.Models;
     }
 
+    /// <summary>
+    /// Finds every book carrying a label whose name matches <paramref name="label"/>
+    /// (case-insensitive), across all collections. Returned books have their
+    /// <see cref="Book.LabelNames"/> populated. An empty query returns nothing.
+    /// </summary>
+    public async Task<List<Book>> SearchByLabelAsync(string label)
+    {
+        var wanted = label?.Trim();
+        if (string.IsNullOrWhiteSpace(wanted))
+        {
+            return new();
+        }
+
+        var result = await _client.From<Book>()
+            .Order("title", Constants.Ordering.Ascending)
+            .Get();
+
+        var namesByBook = await _labelService.GetNamesByBookAsync();
+        var books = new List<Book>();
+        foreach (var book in result.Models)
+        {
+            var names = namesByBook.GetValueOrDefault(book.Id) ?? new();
+            if (names.Any(n => n.Equals(wanted, StringComparison.OrdinalIgnoreCase)))
+            {
+                book.LabelNames = names;
+                books.Add(book);
+            }
+        }
+
+        return books;
+    }
+
     /// <summary>Every book with no ISBN recorded, across all collections, ordered by title.</summary>
     public async Task<List<Book>> GetBooksWithoutIsbnAsync()
     {
