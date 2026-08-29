@@ -192,6 +192,39 @@ public class LabelService
         }
     }
 
+    /// <summary>Adds the given labels to every book, keeping each book's existing labels.</summary>
+    public async Task AddLabelsToBooksAsync(IReadOnlyCollection<Guid> bookIds, IEnumerable<string> names)
+    {
+        var wanted = names
+            .Select(n => n.Trim())
+            .Where(n => n.Length > 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        if (bookIds.Count == 0 || wanted.Count == 0)
+        {
+            return;
+        }
+
+        var labelIds = new List<Guid>();
+        foreach (var name in wanted)
+        {
+            labelIds.Add((await GetOrCreateAsync(name)).Id);
+        }
+
+        foreach (var bookId in bookIds)
+        {
+            var existing = await _client.From<BookLabel>()
+                .Filter("book_id", Constants.Operator.Equals, bookId.ToString())
+                .Get();
+            var have = existing.Models.Select(l => l.LabelId).ToHashSet();
+
+            foreach (var labelId in labelIds.Where(id => !have.Contains(id)))
+            {
+                await _client.From<BookLabel>().Insert(new BookLabel { BookId = bookId, LabelId = labelId });
+            }
+        }
+    }
+
     private async Task<Dictionary<Guid, string>> LabelNamesByIdAsync()
     {
         var labels = await _client.From<Label>().Get();

@@ -4,13 +4,23 @@
     <ul class="book-list">
         @foreach (var book in Books)
         {
-            <li class="book-row">
-                <BookListItem Book="book" OnClick="@(() => OnOpen.InvokeAsync(book))"/>
-                <AuthorizeView Roles="admin" Context="rowAdminContext">
-                    <Authorized>
-                        <button class="icon-button danger" title="Supprimer" @onclick="@(() => OnDelete.InvokeAsync(book))"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></button>
-                    </Authorized>
-                </AuthorizeView>
+            <li class="book-row @(SelectionMode && SelectedIds.Contains(book.Id) ? "selected" : "")">
+                @if (SelectionMode)
+                {
+                    <input type="checkbox" class="book-select" title="Sélectionner"
+                           checked="@SelectedIds.Contains(book.Id)"
+                           @onchange="@(() => OnToggleSelect.InvokeAsync(book))"
+                           @onclick:stopPropagation="true" />
+                }
+                <BookListItem Book="book" OnClick="@(() => ItemClick(book))"/>
+                @if (!SelectionMode)
+                {
+                    <AuthorizeView Roles="admin" Context="rowAdminContext">
+                        <Authorized>
+                            <button class="icon-button danger" title="Supprimer" @onclick="@(() => OnDelete.InvokeAsync(book))"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></button>
+                        </Authorized>
+                    </AuthorizeView>
+                }
             </li>
         }
     </ul>
@@ -20,13 +30,23 @@ else
     <div class="book-tile-grid">
         @foreach (var book in Books)
         {
-            <div class="book-tile-wrapper">
-                <BookTile Book="book" OnClick="@(() => OnOpen.InvokeAsync(book))"/>
-                <AuthorizeView Roles="admin" Context="tileAdminContext">
-                    <Authorized>
-                        <button class="icon-button danger tile-delete" title="Supprimer" @onclick="@(() => OnDelete.InvokeAsync(book))"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></button>
-                    </Authorized>
-                </AuthorizeView>
+            <div class="book-tile-wrapper @(SelectionMode && SelectedIds.Contains(book.Id) ? "selected" : "")">
+                @if (SelectionMode)
+                {
+                    <input type="checkbox" class="book-select book-select-tile" title="Sélectionner"
+                           checked="@SelectedIds.Contains(book.Id)"
+                           @onchange="@(() => OnToggleSelect.InvokeAsync(book))"
+                           @onclick:stopPropagation="true" />
+                }
+                <BookTile Book="book" OnClick="@(() => ItemClick(book))"/>
+                @if (!SelectionMode)
+                {
+                    <AuthorizeView Roles="admin" Context="tileAdminContext">
+                        <Authorized>
+                            <button class="icon-button danger tile-delete" title="Supprimer" @onclick="@(() => OnDelete.InvokeAsync(book))"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></button>
+                        </Authorized>
+                    </AuthorizeView>
+                }
             </div>
         }
     </div>
