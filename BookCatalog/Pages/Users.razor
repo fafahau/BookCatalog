@@ -2,7 +2,7 @@
 @attribute [Authorize(Roles = "admin")]
 @inject UserService UserService
 @inject AuthService AuthService
-@inject IJSRuntime JS
+@inject ConfirmService Confirm
 
 <PageTitle>Utilisateurs</PageTitle>
 
@@ -79,7 +79,11 @@ else
 
     private async Task RemoveAsync(Profile profile)
     {
-        var confirmed = await JS.InvokeAsync<bool>("confirm", $"Retirer l'accès de {(string.IsNullOrWhiteSpace(profile.DisplayName) ? profile.Id.ToString() : profile.DisplayName)} ?");
+        var who = string.IsNullOrWhiteSpace(profile.DisplayName) ? profile.Id.ToString() : profile.DisplayName;
+        var confirmed = await Confirm.ConfirmAsync(
+            $"Retirer l'accès de {who} ?",
+            title: "Retirer l'accès",
+            confirmLabel: "Retirer");
         if (!confirmed)
         {
             return;

@@ -19,6 +19,7 @@ builder.Services.AddSingleton<SupabaseService>();
 builder.Services.AddSingleton<AuthService>();
 builder.Services.AddSingleton<ImageUploadService>();
 builder.Services.AddSingleton<ImageViewerService>();
+builder.Services.AddSingleton<ConfirmService>();
 builder.Services.AddSingleton<LabelService>();
 builder.Services.AddSingleton<BookService>();
 builder.Services.AddSingleton<CollectionService>();

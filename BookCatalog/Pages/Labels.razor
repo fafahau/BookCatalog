@@ -1,7 +1,7 @@
 @page "/labels"
 @attribute [Authorize(Roles = "admin")]
 @inject LabelService LabelService
-@inject IJSRuntime JS
+@inject ConfirmService Confirm
 
 <PageTitle>Labels</PageTitle>
 
@@ -70,7 +70,9 @@ else
 
     private async Task DeleteAsync(Label label)
     {
-        var confirmed = await JS.InvokeAsync<bool>("confirm", $"Supprimer le label « {label.Name} » de tous les livres ?");
+        var confirmed = await Confirm.ConfirmAsync(
+            $"Supprimer le label « {label.Name} » de tous les livres ?",
+            title: "Supprimer le label");
         if (!confirmed)
         {
             return;
