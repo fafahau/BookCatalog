@@ -2,6 +2,7 @@
 @attribute [Authorize]
 @inject BookService BookService
 @inject CollectionService CollectionService
+@inject LabelService LabelService
 @inject ImageViewerService ImageViewer
 @inject IJSRuntime JS
 @implements IAsyncDisposable
@@ -14,10 +15,18 @@
     <button class="@(_mode == SearchMode.Isbn ? "active" : "")" @onclick="() => SetMode(SearchMode.Isbn)">ISBN</button>
     <button class="@(_mode == SearchMode.Title ? "active" : "")" @onclick="() => SetMode(SearchMode.Title)">Titre</button>
     <button class="@(_mode == SearchMode.Author ? "active" : "")" @onclick="() => SetMode(SearchMode.Author)">Auteur</button>
+    <button class="@(_mode == SearchMode.Label ? "active" : "")" @onclick="() => SetMode(SearchMode.Label)">Label</button>
 </div>
 
 <div class="isbn-search">
-    <input placeholder="@Placeholder" @bind="_query" @bind:event="oninput" @onkeyup="OnKeyUp"/>
+    <input placeholder="@Placeholder" list="@(_mode == SearchMode.Label ? "search-label-suggestions" : null)"
+           @bind="_query" @bind:event="oninput" @onkeyup="OnKeyUp"/>
+    <datalist id="search-label-suggestions">
+        @foreach (var label in _allLabels)
+        {
+            <option value="@label"/>
+        }
+    </datalist>
     <button class="primary" @onclick="SearchAsync" disabled="@(_searching || string.IsNullOrWhiteSpace(_query))">
         @(_searching ? "Recherche..." : "Rechercher")
     </button>
@@ -64,6 +73,15 @@
                             <span class="isbn-result-title">@hit.Book.Title</span>
                             <span class="isbn-result-author">@hit.Book.Author</span>
                             <span class="isbn-result-collection">@hit.CollectionName</span>
+                            @if (hit.Book.LabelNames is { Count: > 0 })
+                            {
+                                <span class="book-labels">
+                                    @foreach (var label in hit.Book.LabelNames)
+                                    {
+                                        <span class="label-chip">@label</span>
+                                    }
+                                </span>
+                            }
                         </span>
                     </a>
                 </li>
@@ -110,7 +128,7 @@
 }
 
 @code {
-    private enum SearchMode { Isbn, Title, Author }
+    private enum SearchMode { Isbn, Title, Author, Label }
 
     private SearchMode _mode = SearchMode.Isbn;
     private string _query = string.Empty;
@@ -120,6 +138,7 @@
     private List<Hit> _booksWithoutIsbn = new();
 
     private Dictionary<Guid, string> _collectionNames = new();
+    private List<string> _allLabels = new();
 
     private bool _scanning;
     private bool _scanStarting;
@@ -133,6 +152,7 @@
     {
         SearchMode.Title => "Rechercher par titre",
         SearchMode.Author => "Rechercher par auteur",
+        SearchMode.Label => "Rechercher par label",
         _ => "Rechercher par ISBN"
     };
 
@@ -141,6 +161,15 @@
         _selfRef = DotNetObjectReference.Create(this);
         var collections = await CollectionService.GetAllAsync();
         _collectionNames = collections.ToDictionary(c => c.Id, c => c.Name);
+
+        try
+        {
+            _allLabels = await LabelService.GetNamesAsync();
+        }
+        catch
+        {
+            _allLabels = new();
+        }
     }
 
     private async Task SetMode(SearchMode mode)
@@ -188,6 +217,7 @@
             {
                 SearchMode.Title => await BookService.SearchAsync(query, null),
                 SearchMode.Author => await BookService.SearchAsync(null, query),
+                SearchMode.Label => await BookService.SearchByLabelAsync(query),
                 _ => await BookService.SearchByIsbnAsync(query)
             };
 
