@@ -43,6 +43,8 @@ else
                     else
                     {
                         <a class="collection-name" href="@($"collection/{collection.Id}")">@collection.Name</a>
+                        <span class="collection-count" title="Nombre de livres">@GetBookCount(collection.Id)</span>
+                        <span class="collection-percent" title="Part du total des livres">@GetBookPercent(collection.Id).ToString("0.#")&nbsp;%</span>
                         <AuthorizeView Roles="admin" Context="rowAdminContext">
                             <Authorized>
                                 <button class="icon-button" title="Renommer" @onclick="() => StartRename(collection)">✎</button>
@@ -58,6 +60,7 @@ else
 
 @code {
     private List<BookCollection> _collections = new();
+    private Dictionary<Guid, int> _bookCounts = new();
     private bool _loading = true;
     private string _newCollectionName = string.Empty;
     private Guid? _editingId;
@@ -72,7 +75,16 @@ else
     {
         _loading = true;
         _collections = await CollectionService.GetAllAsync();
+        _bookCounts = await CollectionService.GetBookCountsAsync();
         _loading = false;
+    }
+
+    private int GetBookCount(Guid collectionId) => _bookCounts.GetValueOrDefault(collectionId);
+
+    private double GetBookPercent(Guid collectionId)
+    {
+        var total = _bookCounts.Values.Sum();
+        return total == 0 ? 0 : GetBookCount(collectionId) * 100d / total;
     }
 
     private async Task CreateAsync()
