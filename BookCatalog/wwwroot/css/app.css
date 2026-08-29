@@ -628,6 +628,12 @@ label {
     text-decoration: none;
 }
 
+.book-meta {
+    margin: 0.25rem 0 0;
+    font-size: 0.8rem;
+    color: var(--text-muted, #6b7280);
+}
+
 .filters-accordion {
     margin: 0.75rem 0;
     border: 1px solid var(--border);

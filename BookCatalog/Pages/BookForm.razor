@@ -23,6 +23,13 @@ else
     <div class="page-header">
         <a class="back-link" href="@BackHref">&larr; Retour</a>
         <h1>@(_isEdit ? "Modifier le livre" : "Nouveau livre") @(_collection != null ? $"— {_collection.Name}" : "")</h1>
+        @if (_isEdit && _existingBook != null)
+        {
+            <p class="book-meta">
+                Créé le @_existingBook.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy à HH:mm")
+                · Dernière modification le @_existingBook.UpdatedAt.ToLocalTime().ToString("dd/MM/yyyy à HH:mm")
+            </p>
+        }
     </div>
 
     <div class="isbn-lookup">
