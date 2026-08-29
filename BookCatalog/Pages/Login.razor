@@ -18,11 +18,15 @@
             <DataAnnotationsValidator/>
             <label>
                 Email
-                <InputText @bind-Value="_model.Email" type="email" autocomplete="username"/>
+                <div class="input-icon">
+                    @MailIcon
+                    <InputText @bind-Value="_model.Email" type="email" autocomplete="username"/>
+                </div>
             </label>
             <label>
                 Mot de passe
                 <div class="password-field">
+                    @LockIcon
                     <InputText @bind-Value="_model.Password" type="@PasswordInputType" autocomplete="current-password"/>
                     @PasswordToggleButton
                 </div>
@@ -49,7 +53,10 @@
         <EditForm Model="_model" OnValidSubmit="SendResetAsync">
             <label>
                 Email
-                <InputText @bind-Value="_model.Email" type="email" autocomplete="username"/>
+                <div class="input-icon">
+                    @MailIcon
+                    <InputText @bind-Value="_model.Email" type="email" autocomplete="username"/>
+                </div>
             </label>
 
             @if (!string.IsNullOrEmpty(_error))
@@ -74,15 +81,22 @@
             <DataAnnotationsValidator/>
             <label>
                 Nom affiché
-                <InputText @bind-Value="_model.DisplayName" autocomplete="name"/>
+                <div class="input-icon">
+                    @UserIcon
+                    <InputText @bind-Value="_model.DisplayName" autocomplete="name"/>
+                </div>
             </label>
             <label>
                 Email
-                <InputText @bind-Value="_model.Email" type="email" autocomplete="username"/>
+                <div class="input-icon">
+                    @MailIcon
+                    <InputText @bind-Value="_model.Email" type="email" autocomplete="username"/>
+                </div>
             </label>
             <label>
                 Mot de passe (6 caractères min.)
                 <div class="password-field">
+                    @LockIcon
                     <InputText @bind-Value="_model.Password" type="@PasswordInputType" autocomplete="new-password"/>
                     @PasswordToggleButton
                 </div>
@@ -119,6 +133,21 @@
     private string PasswordInputType => _showPassword ? "text" : "password";
 
     private void ToggleShowPassword() => _showPassword = !_showPassword;
+
+    private static readonly RenderFragment MailIcon = @<svg class="field-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="2" y="4" width="20" height="16" rx="2"/>
+        <path d="M22 6l-10 7L2 6"/>
+    </svg>;
+
+    private static readonly RenderFragment LockIcon = @<svg class="field-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="3" y="11" width="18" height="10" rx="2"/>
+        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+    </svg>;
+
+    private static readonly RenderFragment UserIcon = @<svg class="field-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="8" r="4"/>
+        <path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/>
+    </svg>;
 
     private RenderFragment PasswordToggleButton => @<button type="button" class="password-toggle"
                                                            @onclick="ToggleShowPassword"
