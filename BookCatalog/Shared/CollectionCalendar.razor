@@ -1,0 +1,38 @@
+@inject BookService BookService
+
+<div class="collection-calendar">
+    <div class="calendar-header">
+        <button type="button" class="icon-button" @onclick="PrevMonth" aria-label="Mois précédent">‹</button>
+        <div class="calendar-title">
+            <span class="calendar-month">@MonthLabel</span>
+            <span class="calendar-subtotal">
+                @_monthTotal livre@(_monthTotal > 1 ? "s" : "") ajouté@(_monthTotal > 1 ? "s" : "")
+            </span>
+        </div>
+        <button type="button" class="icon-button" @onclick="NextMonth" aria-label="Mois suivant">›</button>
+    </div>
+
+    @if (_loading)
+    {
+        <p class="calendar-loading">Chargement du calendrier...</p>
+    }
+    else
+    {
+        <div class="calendar-grid">
+            @foreach (var day in WeekdayLabels)
+            {
+                <div class="calendar-weekday">@day</div>
+            }
+            @foreach (var cell in _cells)
+            {
+                <div class="@CellClass(cell)">
+                    <span class="calendar-daynum">@cell.Date.Day</span>
+                    @if (cell.Count > 0)
+                    {
+                        <span class="calendar-count" title="@DayTitle(cell)">@cell.Count</span>
+                    }
+                </div>
+            }
+        </div>
+    }
+</div>
