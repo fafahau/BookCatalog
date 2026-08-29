@@ -35,7 +35,7 @@ public class Book : BaseModel
     [Column("photo_url_2")]
     public string? PhotoUrl2 { get; set; }
 
-    [Column("created_at")]
+    [Column("created_at", ignoreOnInsert: true, ignoreOnUpdate: true)]
     public DateTime CreatedAt { get; set; }
 
     /// <summary>

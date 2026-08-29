@@ -30,8 +30,8 @@ else
         @if (_isEdit && _existingBook != null)
         {
             <p class="book-meta">
-                Créé le @_existingBook.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy à HH:mm")
-                · Dernière modification le @_existingBook.UpdatedAt.ToLocalTime().ToString("dd/MM/yyyy à HH:mm")
+                Créé le @_existingBook.CreatedAt.ToString("dd/MM/yyyy à HH:mm")
+                · Dernière modification le @_existingBook.UpdatedAt.ToString("dd/MM/yyyy à HH:mm")
             </p>
         }
     </div>
