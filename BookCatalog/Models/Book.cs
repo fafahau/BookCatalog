@@ -38,6 +38,13 @@ public class Book : BaseModel
     [Column("created_at")]
     public DateTime CreatedAt { get; set; }
 
+    /// <summary>
+    /// Last change to the book: a direct edit, or a label linked / unlinked.
+    /// Maintained by database triggers — never written from the client.
+    /// </summary>
+    [Column("updated_at", ignoreOnInsert: true, ignoreOnUpdate: true)]
+    public DateTime UpdatedAt { get; set; }
+
     [Column("created_by")]
     public Guid? CreatedBy { get; set; }
 }

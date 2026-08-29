@@ -29,10 +29,19 @@ create table if not exists public.books (
     photo_url_1   text,
     photo_url_2   text,
     created_at    timestamptz not null default now(),
+    updated_at    timestamptz not null default now(),
     created_by    uuid references public.profiles (id) on delete set null
 );
 
 create index if not exists books_collection_id_idx on public.books (collection_id);
+
+-- updated_at: last time the book changed — a direct edit to the row, or a label
+-- linked / unlinked (see section 2b). Added after the initial release, so bring
+-- it in nullable, backfill existing rows from created_at, then lock it down.
+alter table public.books add column if not exists updated_at timestamptz;
+update public.books set updated_at = created_at where updated_at is null;
+alter table public.books alter column updated_at set default now();
+alter table public.books alter column updated_at set not null;
 
 -- Widen the role check to allow 'superadmin' when re-running against an existing DB
 -- (create table if not exists above leaves the old constraint in place).
@@ -85,6 +94,44 @@ drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
     after insert on auth.users
     for each row execute procedure public.handle_new_user();
+
+-- ============================================================
+-- 2b. Keep books.updated_at fresh:
+--     - a direct edit to a book row               -> BEFORE UPDATE on books
+--     - a label linked to / unlinked from a book  -> AFTER INSERT/DELETE on book_labels
+-- ============================================================
+
+create or replace function public.set_updated_at()
+returns trigger
+language plpgsql
+as $$
+begin
+    new.updated_at = now();
+    return new;
+end;
+$$;
+
+drop trigger if exists books_set_updated_at on public.books;
+create trigger books_set_updated_at
+    before update on public.books
+    for each row execute procedure public.set_updated_at();
+
+create or replace function public.touch_book_updated_at()
+returns trigger
+language plpgsql
+as $$
+begin
+    update public.books
+        set updated_at = now()
+        where id = coalesce(new.book_id, old.book_id);
+    return coalesce(new, old);
+end;
+$$;
+
+drop trigger if exists book_labels_touch_book on public.book_labels;
+create trigger book_labels_touch_book
+    after insert or delete on public.book_labels
+    for each row execute procedure public.touch_book_updated_at();
 
 -- ============================================================
 -- 3. Helpers: role checks for the current authenticated user.
