@@ -59,6 +59,35 @@ public class LabelService
             .Delete();
     }
 
+    /// <summary>
+    /// Creates a new label. Returns <c>null</c> if one with the same name already
+    /// exists (case-insensitive) — the caller can surface that to the user.
+    /// </summary>
+    public async Task<Label?> CreateAsync(string name)
+    {
+        name = name.Trim();
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return null;
+        }
+
+        if (await FindByNameAsync(name) != null)
+        {
+            return null;
+        }
+
+        try
+        {
+            var inserted = await _client.From<Label>().Insert(new Label { Name = name });
+            return inserted.Models.First();
+        }
+        catch (PostgrestException)
+        {
+            // Lost a race on the unique(lower(name)) index — treat as "already exists".
+            return null;
+        }
+    }
+
     /// <summary>Finds a label by name (case-insensitive) or creates it.</summary>
     public async Task<Label> GetOrCreateAsync(string name)
     {
