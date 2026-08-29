@@ -668,12 +668,14 @@ label {
     margin: 0.5rem 0 1rem;
 }
 
-.view-toggle {
+.view-toggle,
+.group-toggle {
     display: flex;
     gap: 0.25rem;
 }
 
-.view-toggle button.active {
+.view-toggle button.active,
+.group-toggle button.active {
     background: var(--accent);
     color: #fff;
     border-color: var(--accent);

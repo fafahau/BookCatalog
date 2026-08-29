@@ -44,14 +44,6 @@ else
                     <option value="@BookSort.TitleDesc">Titre (Z → A)</option>
                 </select>
             </label>
-            <label class="sort-select">
-                Grouper par
-                <select @bind="_groupMode" @bind:after="RebuildGroups">
-                    <option value="@GroupMode.None">Aucun</option>
-                    <option value="@GroupMode.Label">Label</option>
-                    <option value="@GroupMode.Author">Auteur</option>
-                </select>
-            </label>
         </div>
 
         <div class="isbn-lookup-panel">
@@ -88,6 +80,12 @@ else
         <div class="view-toggle">
             <button class="@(_viewMode == ViewMode.List ? "active" : "")" @onclick='() => SetViewMode(ViewMode.List)'>☰ Liste</button>
             <button class="@(_viewMode == ViewMode.Tile ? "active" : "")" @onclick='() => SetViewMode(ViewMode.Tile)'>▦ Tuiles</button>
+        </div>
+
+        <div class="group-toggle">
+            <button class="@(_groupMode == GroupMode.None ? "active" : "")" @onclick="() => SetGroupMode(GroupMode.None)">Aucun</button>
+            <button class="@(_groupMode == GroupMode.Label ? "active" : "")" @onclick="() => SetGroupMode(GroupMode.Label)">Par label</button>
+            <button class="@(_groupMode == GroupMode.Author ? "active" : "")" @onclick="() => SetGroupMode(GroupMode.Author)">Par auteur</button>
         </div>
 
         <AuthorizeView Roles="admin" Context="adminContext">
@@ -206,6 +204,12 @@ else
     }
 
     private void SetViewMode(ViewMode mode) => _viewMode = mode;
+
+    private void SetGroupMode(GroupMode mode)
+    {
+        _groupMode = mode;
+        RebuildGroups();
+    }
 
     private async Task ReloadBooksAsync()
     {
