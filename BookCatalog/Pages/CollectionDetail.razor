@@ -228,8 +228,9 @@ else
     private List<BookGroup> _groupedBooks = new();
 
     // Filters + view toggles are remembered across navigation and reloads
-    // (localStorage) until the user changes them.
-    private const string StateKey = "collection-view";
+    // (localStorage) until the user changes them. Keyed per collection, so each
+    // collection keeps its own filters.
+    private string StateKey => $"collection-view.{Id}";
 
     private sealed class ViewState
     {
