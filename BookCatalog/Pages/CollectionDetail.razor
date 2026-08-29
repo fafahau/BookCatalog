@@ -90,20 +90,14 @@ else
             </div>
 
             <div class="page-toggle">
-                <button class="@(_paginationEnabled ? "active" : "")" @onclick="TogglePagination">
-                    Pagination @(_paginationEnabled ? "activée" : "désactivée")
-                </button>
-                @if (_paginationEnabled)
-                {
-                    <label class="page-size-select">
-                        Par
-                        <select @bind="_pageSize" @bind:after="OnPageSizeChanged">
-                            <option value="20">20</option>
-                            <option value="40">40</option>
-                            <option value="60">60</option>
-                        </select>
-                    </label>
-                }
+                <label class="page-size-select">
+                    Livres par page
+                    <select @bind="_pageSize" @bind:after="OnPageSizeChanged">
+                        <option value="20">20</option>
+                        <option value="40">40</option>
+                        <option value="60">60</option>
+                    </select>
+                </label>
             </div>
         </div>
 
@@ -126,7 +120,7 @@ else
     {
         @RenderBooks(PagedBooks)
 
-        @if (_paginationEnabled && _totalPages > 1)
+        @if (_totalPages > 1)
         {
             <div class="pager">
                 <button class="icon-button" @onclick="PrevPage" disabled="@(_currentPage <= 1)">‹ Précédent</button>
@@ -201,19 +195,16 @@ else
     private ViewMode _viewMode = ViewMode.List;
     private GroupMode _groupMode = GroupMode.None;
 
-    private bool _paginationEnabled = true;
     private int _pageSize = 20;
     private int _currentPage = 1;
 
     private int _totalPages =>
-        _paginationEnabled && _books.Count > 0
+        _books.Count > 0
             ? (int)Math.Ceiling(_books.Count / (double)_pageSize)
             : 1;
 
     private IReadOnlyList<Book> PagedBooks =>
-        _paginationEnabled
-            ? _books.Skip((_currentPage - 1) * _pageSize).Take(_pageSize).ToList()
-            : _books;
+        _books.Skip((_currentPage - 1) * _pageSize).Take(_pageSize).ToList();
     private readonly BookFilter _filter = new();
     private List<string> _allLabels = new();
 
@@ -246,12 +237,6 @@ else
     }
 
     private void SetViewMode(ViewMode mode) => _viewMode = mode;
-
-    private void TogglePagination()
-    {
-        _paginationEnabled = !_paginationEnabled;
-        _currentPage = 1;
-    }
 
     private void OnPageSizeChanged() => _currentPage = 1;
 
