@@ -1299,6 +1299,35 @@ label {
     color: var(--accent-dark);
 }
 
+/* Per-label color: a stable hue is picked from the label name in LabelColor.cs
+   (.label-chip--c0 … c7), so a book's several labels stay distinguishable and
+   the same label keeps its color across the app. */
+.label-chip--c0 { --label-h: 210; }
+.label-chip--c1 { --label-h: 145; }
+.label-chip--c2 { --label-h: 275; }
+.label-chip--c3 { --label-h: 25; }
+.label-chip--c4 { --label-h: 340; }
+.label-chip--c5 { --label-h: 190; }
+.label-chip--c6 { --label-h: 95; }
+.label-chip--c7 { --label-h: 45; }
+
+.label-chip[class*="label-chip--c"] {
+    background: hsl(var(--label-h) 65% 90%);
+    color: hsl(var(--label-h) 55% 26%);
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .label-chip[class*="label-chip--c"] {
+        background: hsl(var(--label-h) 38% 24%);
+        color: hsl(var(--label-h) 75% 82%);
+    }
+}
+
+:root[data-theme="dark"] .label-chip[class*="label-chip--c"] {
+    background: hsl(var(--label-h) 38% 24%);
+    color: hsl(var(--label-h) 75% 82%);
+}
+
 .book-labels {
     display: flex;
     flex-wrap: wrap;
@@ -1341,7 +1370,8 @@ label {
     padding: 0;
     font-size: 1rem;
     line-height: 1;
-    color: var(--accent-dark);
+    color: inherit;
+    opacity: 0.7;
     cursor: pointer;
 }
 

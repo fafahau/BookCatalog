@@ -18,7 +18,7 @@
             <div class="book-labels">
                 @foreach (var label in Book.LabelNames)
                 {
-                    <span class="label-chip">@label</span>
+                    <span class="@LabelColor.ClassFor(label)">@label</span>
                 }
             </div>
         }

@@ -79,7 +79,7 @@ else
                 <div class="label-editor">
                     @foreach (var label in _labels)
                     {
-                        <span class="label-chip">
+                        <span class="@LabelColor.ClassFor(label)">
                             @label
                             <button type="button" title="Retirer" @onclick="() => RemoveLabel(label)">&times;</button>
                         </span>
