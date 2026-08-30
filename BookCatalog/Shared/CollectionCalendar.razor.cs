@@ -38,7 +38,9 @@ public partial class CollectionCalendar
         var dates = await BookService.GetCreatedAtByCollectionAsync(CollectionId);
         foreach (var date in dates)
         {
-            var key = DateOnly.FromDateTime(date.ToLocalTime());
+            // created_at already comes back in local time, so take its date as-is —
+            // converting again shifts entries onto the wrong day near midnight.
+            var key = DateOnly.FromDateTime(date);
             _counts[key] = _counts.GetValueOrDefault(key) + 1;
         }
 
