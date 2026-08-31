@@ -7,39 +7,64 @@ public class CollectionService
 {
     private readonly Supabase.Client _client;
     private readonly BookService _bookService;
+    private readonly OfflineLibraryService _offline;
 
-    public CollectionService(SupabaseService supabaseService, BookService bookService)
+    public CollectionService(SupabaseService supabaseService, BookService bookService, OfflineLibraryService offline)
     {
         _client = supabaseService.Client;
         _bookService = bookService;
+        _offline = offline;
     }
 
-    public async Task<List<BookCollection>> GetAllAsync()
+    private async Task<T> WithOfflineFallback<T>(Func<Task<T>> online, Func<T> offline)
     {
-        var result = await _client.From<BookCollection>()
-            .Order("name", Constants.Ordering.Ascending)
-            .Get();
-        return result.Models;
+        if (!_offline.IsOnline && _offline.HasSnapshot)
+        {
+            return offline();
+        }
+
+        try
+        {
+            return await online();
+        }
+        catch when (_offline.HasSnapshot)
+        {
+            return offline();
+        }
     }
+
+    public Task<List<BookCollection>> GetAllAsync() =>
+        WithOfflineFallback(
+            async () =>
+            {
+                var result = await _client.From<BookCollection>()
+                    .Order("name", Constants.Ordering.Ascending)
+                    .Get();
+                return result.Models;
+            },
+            () => _offline.Collections());
 
     /// <summary>Number of books in each collection, keyed by collection id.</summary>
-    public async Task<Dictionary<Guid, int>> GetBookCountsAsync()
-    {
-        var result = await _client.From<Book>()
-            .Select("collection_id")
-            .Get();
+    public Task<Dictionary<Guid, int>> GetBookCountsAsync() =>
+        WithOfflineFallback(
+            async () =>
+            {
+                var result = await _client.From<Book>()
+                    .Select("collection_id")
+                    .Get();
 
-        return result.Models
-            .GroupBy(b => b.CollectionId)
-            .ToDictionary(g => g.Key, g => g.Count());
-    }
+                return result.Models
+                    .GroupBy(b => b.CollectionId)
+                    .ToDictionary(g => g.Key, g => g.Count());
+            },
+            () => _offline.BookCounts());
 
-    public async Task<BookCollection?> GetByIdAsync(Guid id)
-    {
-        return await _client.From<BookCollection>()
-            .Filter("id", Constants.Operator.Equals, id.ToString())
-            .Single();
-    }
+    public Task<BookCollection?> GetByIdAsync(Guid id) =>
+        WithOfflineFallback(
+            async () => await _client.From<BookCollection>()
+                .Filter("id", Constants.Operator.Equals, id.ToString())
+                .Single(),
+            () => _offline.Collection(id));
 
     public async Task<BookCollection> CreateAsync(string name, Guid createdBy)
     {

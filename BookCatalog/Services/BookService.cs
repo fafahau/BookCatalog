@@ -24,165 +24,207 @@ public class BookService
     private readonly Supabase.Client _client;
     private readonly ImageUploadService _imageUploadService;
     private readonly LabelService _labelService;
+    private readonly OfflineLibraryService _offline;
 
-    public BookService(SupabaseService supabaseService, ImageUploadService imageUploadService, LabelService labelService)
+    public BookService(SupabaseService supabaseService, ImageUploadService imageUploadService,
+        LabelService labelService, OfflineLibraryService offline)
     {
         _client = supabaseService.Client;
         _imageUploadService = imageUploadService;
         _labelService = labelService;
+        _offline = offline;
     }
 
-    public async Task<List<Book>> GetByCollectionAsync(Guid collectionId, BookFilter? filter = null)
+    /// <summary>
+    /// Runs <paramref name="online"/>, but serves <paramref name="offline"/> from the local
+    /// snapshot when the device is offline or the request fails and a snapshot exists.
+    /// </summary>
+    private async Task<T> WithOfflineFallback<T>(Func<Task<T>> online, Func<T> offline)
     {
-        var query = _client.From<Book>()
-            .Filter("collection_id", Constants.Operator.Equals, collectionId.ToString());
-
-        if (!string.IsNullOrWhiteSpace(filter?.Title))
+        if (!_offline.IsOnline && _offline.HasSnapshot)
         {
-            query = query.Filter("title", Constants.Operator.ILike, $"%{filter.Title}%");
+            return offline();
         }
 
-        if (!string.IsNullOrWhiteSpace(filter?.Author))
+        try
         {
-            query = query.Filter("author", Constants.Operator.ILike, $"%{filter.Author}%");
+            return await online();
         }
-
-        var result = (filter?.Sort ?? BookSort.Recent) switch
+        catch when (_offline.HasSnapshot)
         {
-            BookSort.TitleAsc => await query.Order("title", Constants.Ordering.Ascending).Get(),
-            BookSort.TitleDesc => await query.Order("title", Constants.Ordering.Descending).Get(),
-            _ => await query.Order("created_at", Constants.Ordering.Descending).Get()
-        };
-
-        var books = result.Models;
-        if (books.Count > 0)
-        {
-            var namesByBook = await _labelService.GetNamesByBookAsync();
-            foreach (var book in books)
-            {
-                book.LabelNames = namesByBook.GetValueOrDefault(book.Id) ?? new();
-            }
+            return offline();
         }
-
-        if (!string.IsNullOrWhiteSpace(filter?.Label))
-        {
-            var wanted = filter.Label.Trim();
-            books = books
-                .Where(b => b.LabelNames.Any(n => n.Equals(wanted, StringComparison.OrdinalIgnoreCase)))
-                .ToList();
-        }
-
-        return books;
     }
+
+    public Task<List<Book>> GetByCollectionAsync(Guid collectionId, BookFilter? filter = null) =>
+        WithOfflineFallback(
+            async () =>
+            {
+                var query = _client.From<Book>()
+                    .Filter("collection_id", Constants.Operator.Equals, collectionId.ToString());
+
+                if (!string.IsNullOrWhiteSpace(filter?.Title))
+                {
+                    query = query.Filter("title", Constants.Operator.ILike, $"%{filter.Title}%");
+                }
+
+                if (!string.IsNullOrWhiteSpace(filter?.Author))
+                {
+                    query = query.Filter("author", Constants.Operator.ILike, $"%{filter.Author}%");
+                }
+
+                var result = (filter?.Sort ?? BookSort.Recent) switch
+                {
+                    BookSort.TitleAsc => await query.Order("title", Constants.Ordering.Ascending).Get(),
+                    BookSort.TitleDesc => await query.Order("title", Constants.Ordering.Descending).Get(),
+                    _ => await query.Order("created_at", Constants.Ordering.Descending).Get()
+                };
+
+                var books = result.Models;
+                if (books.Count > 0)
+                {
+                    var namesByBook = await _labelService.GetNamesByBookAsync();
+                    foreach (var book in books)
+                    {
+                        book.LabelNames = namesByBook.GetValueOrDefault(book.Id) ?? new();
+                    }
+                }
+
+                if (!string.IsNullOrWhiteSpace(filter?.Label))
+                {
+                    var wanted = filter.Label.Trim();
+                    books = books
+                        .Where(b => b.LabelNames.Any(n => n.Equals(wanted, StringComparison.OrdinalIgnoreCase)))
+                        .ToList();
+                }
+
+                return books;
+            },
+            () => _offline.BooksInCollection(collectionId, filter));
 
     /// <summary>
     /// Creation timestamps of every book in the collection. Bucketing by day is left
     /// to the caller. Used by the admin-only "calendrier des ajouts".
     /// </summary>
-    public async Task<List<DateTime>> GetCreatedAtByCollectionAsync(Guid collectionId)
-    {
-        var result = await _client.From<Book>()
-            .Select("created_at")
-            .Filter("collection_id", Constants.Operator.Equals, collectionId.ToString())
-            .Get();
+    public Task<List<DateTime>> GetCreatedAtByCollectionAsync(Guid collectionId) =>
+        WithOfflineFallback(
+            async () =>
+            {
+                var result = await _client.From<Book>()
+                    .Select("created_at")
+                    .Filter("collection_id", Constants.Operator.Equals, collectionId.ToString())
+                    .Get();
 
-        return result.Models.Select(b => b.CreatedAt).ToList();
-    }
+                return result.Models.Select(b => b.CreatedAt).ToList();
+            },
+            () => _offline.CreatedAtInCollection(collectionId));
 
     /// <summary>
     /// Finds every book whose ISBN matches <paramref name="isbn"/>, across all collections,
     /// regardless of the caller's role (books are readable by any signed-in user).
     /// Comparison is done on digits only so hyphenated / scanned forms all match.
     /// </summary>
-    public async Task<List<Book>> SearchByIsbnAsync(string isbn)
-    {
-        var normalized = NormalizeIsbn(isbn);
-        if (normalized.Length < 8)
-        {
-            return new();
-        }
+    public Task<List<Book>> SearchByIsbnAsync(string isbn) =>
+        WithOfflineFallback(
+            async () =>
+            {
+                var normalized = NormalizeIsbn(isbn);
+                if (normalized.Length < 8)
+                {
+                    return new();
+                }
 
-        var result = await _client.From<Book>()
-            .Order("created_at", Constants.Ordering.Descending)
-            .Get();
+                var result = await _client.From<Book>()
+                    .Order("created_at", Constants.Ordering.Descending)
+                    .Get();
 
-        return result.Models
-            .Where(b => NormalizeIsbn(b.Isbn) == normalized)
-            .ToList();
-    }
+                return result.Models
+                    .Where(b => NormalizeIsbn(b.Isbn) == normalized)
+                    .ToList();
+            },
+            () => _offline.SearchByIsbn(isbn));
 
     /// <summary>
     /// Finds every book whose title and/or author matches, across all collections.
     /// Both terms are optional; an empty query returns nothing.
     /// </summary>
-    public async Task<List<Book>> SearchAsync(string? title, string? author)
-    {
-        var titleTerm = title?.Trim();
-        var authorTerm = author?.Trim();
-        if (string.IsNullOrWhiteSpace(titleTerm) && string.IsNullOrWhiteSpace(authorTerm))
-        {
-            return new();
-        }
+    public Task<List<Book>> SearchAsync(string? title, string? author) =>
+        WithOfflineFallback(
+            async () =>
+            {
+                var titleTerm = title?.Trim();
+                var authorTerm = author?.Trim();
+                if (string.IsNullOrWhiteSpace(titleTerm) && string.IsNullOrWhiteSpace(authorTerm))
+                {
+                    return new();
+                }
 
-        IPostgrestTable<Book> query = _client.From<Book>();
+                IPostgrestTable<Book> query = _client.From<Book>();
 
-        if (!string.IsNullOrWhiteSpace(titleTerm))
-        {
-            query = query.Filter("title", Constants.Operator.ILike, $"%{titleTerm}%");
-        }
+                if (!string.IsNullOrWhiteSpace(titleTerm))
+                {
+                    query = query.Filter("title", Constants.Operator.ILike, $"%{titleTerm}%");
+                }
 
-        if (!string.IsNullOrWhiteSpace(authorTerm))
-        {
-            query = query.Filter("author", Constants.Operator.ILike, $"%{authorTerm}%");
-        }
+                if (!string.IsNullOrWhiteSpace(authorTerm))
+                {
+                    query = query.Filter("author", Constants.Operator.ILike, $"%{authorTerm}%");
+                }
 
-        var result = await query.Order("title", Constants.Ordering.Ascending).Get();
-        return result.Models;
-    }
+                var result = await query.Order("title", Constants.Ordering.Ascending).Get();
+                return result.Models;
+            },
+            () => _offline.Search(title, author));
 
     /// <summary>
     /// Finds every book carrying a label whose name matches <paramref name="label"/>
     /// (case-insensitive), across all collections. Returned books have their
     /// <see cref="Book.LabelNames"/> populated. An empty query returns nothing.
     /// </summary>
-    public async Task<List<Book>> SearchByLabelAsync(string label)
-    {
-        var wanted = label?.Trim();
-        if (string.IsNullOrWhiteSpace(wanted))
-        {
-            return new();
-        }
-
-        var result = await _client.From<Book>()
-            .Order("title", Constants.Ordering.Ascending)
-            .Get();
-
-        var namesByBook = await _labelService.GetNamesByBookAsync();
-        var books = new List<Book>();
-        foreach (var book in result.Models)
-        {
-            var names = namesByBook.GetValueOrDefault(book.Id) ?? new();
-            if (names.Any(n => n.Equals(wanted, StringComparison.OrdinalIgnoreCase)))
+    public Task<List<Book>> SearchByLabelAsync(string label) =>
+        WithOfflineFallback(
+            async () =>
             {
-                book.LabelNames = names;
-                books.Add(book);
-            }
-        }
+                var wanted = label?.Trim();
+                if (string.IsNullOrWhiteSpace(wanted))
+                {
+                    return new();
+                }
 
-        return books;
-    }
+                var result = await _client.From<Book>()
+                    .Order("title", Constants.Ordering.Ascending)
+                    .Get();
+
+                var namesByBook = await _labelService.GetNamesByBookAsync();
+                var books = new List<Book>();
+                foreach (var book in result.Models)
+                {
+                    var names = namesByBook.GetValueOrDefault(book.Id) ?? new();
+                    if (names.Any(n => n.Equals(wanted, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        book.LabelNames = names;
+                        books.Add(book);
+                    }
+                }
+
+                return books;
+            },
+            () => _offline.SearchByLabel(label));
 
     /// <summary>Every book with no ISBN recorded, across all collections, ordered by title.</summary>
-    public async Task<List<Book>> GetBooksWithoutIsbnAsync()
-    {
-        var result = await _client.From<Book>()
-            .Order("title", Constants.Ordering.Ascending)
-            .Get();
+    public Task<List<Book>> GetBooksWithoutIsbnAsync() =>
+        WithOfflineFallback(
+            async () =>
+            {
+                var result = await _client.From<Book>()
+                    .Order("title", Constants.Ordering.Ascending)
+                    .Get();
 
-        return result.Models
-            .Where(b => NormalizeIsbn(b.Isbn).Length == 0)
-            .ToList();
-    }
+                return result.Models
+                    .Where(b => NormalizeIsbn(b.Isbn).Length == 0)
+                    .ToList();
+            },
+            () => _offline.BooksWithoutIsbn());
 
     /// <summary>Keeps digits (and a trailing ISBN-10 check "X"); drops hyphens, spaces, prefixes.</summary>
     public static string NormalizeIsbn(string? raw)
@@ -209,19 +251,22 @@ public class BookService
             .ToList();
     }
 
-    public async Task<Book?> GetByIdAsync(Guid id)
-    {
-        var book = await _client.From<Book>()
-            .Filter("id", Constants.Operator.Equals, id.ToString())
-            .Single();
+    public Task<Book?> GetByIdAsync(Guid id) =>
+        WithOfflineFallback(
+            async () =>
+            {
+                var book = await _client.From<Book>()
+                    .Filter("id", Constants.Operator.Equals, id.ToString())
+                    .Single();
 
-        if (book != null)
-        {
-            book.LabelNames = await _labelService.GetNamesForBookAsync(book.Id);
-        }
+                if (book != null)
+                {
+                    book.LabelNames = await _labelService.GetNamesForBookAsync(book.Id);
+                }
 
-        return book;
-    }
+                return book;
+            },
+            () => _offline.Book(id));
 
     public async Task<Book> CreateAsync(Book book)
     {

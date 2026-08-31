@@ -1,5 +1,6 @@
 @inject AuthService AuthService
 @inject NavigationManager Navigation
+@inject OfflineLibraryService Offline
 
 <AuthorizeView>
     <Authorized>
@@ -16,8 +17,16 @@
             <NavLink class="nav-link" href="collections">Collections</NavLink>
             <AuthorizeView Roles="admin" Context="adminContext">
                 <Authorized>
-                    <NavLink class="nav-link" href="labels">Labels</NavLink>
-                    <NavLink class="nav-link" href="users">Utilisateurs</NavLink>
+                    @if (Offline.IsOnline)
+                    {
+                        <NavLink class="nav-link" href="labels">Labels</NavLink>
+                        <NavLink class="nav-link" href="users">Utilisateurs</NavLink>
+                    }
+                    else
+                    {
+                        <span class="nav-link nav-link--disabled" title="Indisponible hors ligne">Labels</span>
+                        <span class="nav-link nav-link--disabled" title="Indisponible hors ligne">Utilisateurs</span>
+                    }
                 </Authorized>
             </AuthorizeView>
             <button class="nav-link logout" @onclick="LogoutAsync">Déconnexion</button>

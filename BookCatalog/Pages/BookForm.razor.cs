@@ -14,6 +14,9 @@ public partial class BookForm
     [Parameter]
     public Guid Id { get; set; }
 
+    [CascadingParameter(Name = "IsOnline")]
+    private bool IsOnline { get; set; } = true;
+
     private bool _isEdit => Id != Guid.Empty;
     private string BackHref => _collection != null ? $"collection/{_collection.Id}" : "";
 
@@ -128,6 +131,12 @@ public partial class BookForm
 
     private async Task LookupIsbnAsync()
     {
+        if (!IsOnline)
+        {
+            _isbnMessage = "La recherche par ISBN nécessite une connexion.";
+            return;
+        }
+
         _isbnLookupBusy = true;
         _isbnMessage = null;
         StateHasChanged();
@@ -295,6 +304,12 @@ public partial class BookForm
 
     private async Task SaveAsync()
     {
+        if (!IsOnline)
+        {
+            _error = "Impossible d'enregistrer hors ligne. Reconnectez-vous pour ajouter ou modifier un livre.";
+            return;
+        }
+
         _saving = true;
         _error = null;
 

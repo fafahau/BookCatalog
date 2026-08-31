@@ -23,7 +23,10 @@
     </a>
     <AuthorizeView Roles="admin">
         <Authorized>
-            <a class="home-tile" href="users">
+            @* Admin-only management pages — nothing works on them without a
+               connection, so they're locked (not hidden) while offline. *@
+            <a class="home-tile @(IsOnline ? null : "home-tile--disabled")" href="@(IsOnline ? "users" : null)"
+               aria-disabled="@(IsOnline ? null : "true")" title="@(IsOnline ? null : "Indisponible hors ligne")">
                 <span class="home-tile-icon">
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
@@ -34,7 +37,8 @@
                 </span>
                 <span class="home-tile-label">Utilisateurs</span>
             </a>
-            <a class="home-tile" href="labels">
+            <a class="home-tile @(IsOnline ? null : "home-tile--disabled")" href="@(IsOnline ? "labels" : null)"
+               aria-disabled="@(IsOnline ? null : "true")" title="@(IsOnline ? null : "Indisponible hors ligne")">
                 <span class="home-tile-icon">
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <path d="M20.59 13.41L11 3.83V3H3v8h.83l9.58 9.59a2 2 0 0 0 2.83 0l4.35-4.35a2 2 0 0 0 0-2.83z"/>
@@ -46,3 +50,8 @@
         </Authorized>
     </AuthorizeView>
 </div>
+
+@code {
+    [CascadingParameter(Name = "IsOnline")]
+    private bool IsOnline { get; set; } = true;
+}

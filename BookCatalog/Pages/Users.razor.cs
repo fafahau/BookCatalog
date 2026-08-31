@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Components;
 using BookCatalog.Models;
 using BookCatalog.Services;
 
@@ -5,6 +6,9 @@ namespace BookCatalog.Pages;
 
 public partial class Users
 {
+    [CascadingParameter(Name = "IsOnline")]
+    private bool IsOnline { get; set; } = true;
+
     private List<Profile> _profiles = new();
     private bool _loading = true;
 
@@ -43,7 +47,7 @@ public partial class Users
         // Only a superadmin may grant or touch the 'superadmin' role. The RLS
         // policy profiles_admin_update enforces this server-side too; this is
         // just a clean client-side stop so we never fire a doomed request.
-        if ((role == "superadmin" || profile.IsSuperAdmin) && !AuthService.IsSuperAdmin)
+        if (!IsOnline || ((role == "superadmin" || profile.IsSuperAdmin) && !AuthService.IsSuperAdmin))
         {
             return;
         }
@@ -54,6 +58,11 @@ public partial class Users
 
     private async Task RemoveAsync(Profile profile)
     {
+        if (!IsOnline)
+        {
+            return;
+        }
+
         var who = string.IsNullOrWhiteSpace(profile.DisplayName) ? profile.Id.ToString() : profile.DisplayName;
         var confirmed = await Confirm.ConfirmAsync(
             $"Retirer l'accès de {who} ?",

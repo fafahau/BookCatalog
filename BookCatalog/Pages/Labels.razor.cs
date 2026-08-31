@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using BookCatalog.Models;
 using BookCatalog.Services;
@@ -6,6 +7,9 @@ namespace BookCatalog.Pages;
 
 public partial class Labels
 {
+    [CascadingParameter(Name = "IsOnline")]
+    private bool IsOnline { get; set; } = true;
+
     private List<Label> _labels = new();
     private Dictionary<Guid, string> _drafts = new();
     private string _newLabelName = string.Empty;
@@ -26,7 +30,7 @@ public partial class Labels
     private async Task CreateAsync()
     {
         var name = _newLabelName.Trim();
-        if (name.Length == 0 || _busy)
+        if (name.Length == 0 || _busy || !IsOnline)
         {
             return;
         }
@@ -62,7 +66,7 @@ public partial class Labels
     private async Task RenameAsync(Label label)
     {
         var newName = _drafts[label.Id].Trim();
-        if (newName.Length == 0 || newName == label.Name)
+        if (newName.Length == 0 || newName == label.Name || !IsOnline)
         {
             return;
         }
@@ -81,6 +85,11 @@ public partial class Labels
 
     private async Task DeleteAsync(Label label)
     {
+        if (!IsOnline)
+        {
+            return;
+        }
+
         var confirmed = await Confirm.ConfirmAsync(
             $"Supprimer le label « {label.Name} » de tous les livres ?",
             title: "Supprimer le label");

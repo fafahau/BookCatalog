@@ -42,7 +42,7 @@ else
             <div class="form-card-title">Recherche par ISBN</div>
             <div class="isbn-lookup">
                 <input placeholder="ISBN (optionnel)" @bind="_isbn" @bind:event="oninput"/>
-                <button type="button" @onclick="LookupIsbnAsync" disabled="@(_isbnLookupBusy || string.IsNullOrWhiteSpace(_isbn))">
+                <button type="button" @onclick="LookupIsbnAsync" disabled="@(_isbnLookupBusy || string.IsNullOrWhiteSpace(_isbn) || !IsOnline)">
                     @(_isbnLookupBusy ? "Recherche..." : "Rechercher")
                 </button>
                 <button type="button" class="scan-toggle" @onclick="ToggleScanAsync" disabled="@_scanStarting">
@@ -176,7 +176,12 @@ else
                 <p class="form-error">@_error</p>
             }
 
-            <button type="submit" class="primary" disabled="@_saving">@(_saving ? "Enregistrement..." : "Enregistrer")</button>
+            @if (!IsOnline)
+            {
+                <p class="form-error">L'ajout et la modification de livres sont indisponibles hors ligne.</p>
+            }
+
+            <button type="submit" class="primary" disabled="@(_saving || !IsOnline)">@(_saving ? "Enregistrement..." : "Enregistrer")</button>
         </EditForm>
     </div>
     </div>

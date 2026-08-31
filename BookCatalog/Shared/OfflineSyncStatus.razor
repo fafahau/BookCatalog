@@ -1,0 +1,21 @@
+@implements IDisposable
+@inject OfflineLibraryService Offline
+
+@if (Offline.SyncedAt is { } t)
+{
+    <p class="offline-sync">
+        Copie hors ligne — mise à jour le @t.ToLocalTime().ToString("dd/MM/yyyy à HH:mm")
+    </p>
+}
+else if (!Offline.IsOnline)
+{
+    <p class="offline-sync">Aucune copie hors ligne enregistrée pour l'instant.</p>
+}
+
+@code {
+    protected override void OnInitialized() => Offline.Changed += OnChanged;
+
+    private void OnChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Offline.Changed -= OnChanged;
+}

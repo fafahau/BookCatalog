@@ -27,6 +27,9 @@ public partial class BookCollectionList
     [Parameter]
     public EventCallback<Book> OnToggleSelect { get; set; }
 
+    [CascadingParameter(Name = "IsOnline")]
+    private bool IsOnline { get; set; } = true;
+
     private Task ItemClick(Book book) =>
         SelectionMode ? OnToggleSelect.InvokeAsync(book) : OnOpen.InvokeAsync(book);
 }

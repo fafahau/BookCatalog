@@ -420,6 +420,32 @@ label {
     font-style: italic;
 }
 
+/* Offline mode */
+
+.offline-banner {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0 1.1rem 0.8rem;
+    padding: 0.55rem 0.85rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface-alt);
+    color: var(--text-soft);
+    font-size: 0.88rem;
+}
+
+.offline-banner svg {
+    flex: none;
+    color: var(--text-muted);
+}
+
+.offline-sync {
+    margin: -0.25rem 0 1rem;
+    font-size: 0.82rem;
+    color: var(--text-faint);
+}
+
 /* Topbar / nav */
 
 .topbar {
@@ -510,6 +536,15 @@ label {
 .navmenu .nav-link.logout {
     margin-left: auto;
     color: var(--danger);
+}
+
+.navmenu .nav-link--disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.navmenu .nav-link--disabled:hover {
+    color: var(--text-muted);
 }
 
 .content {
@@ -605,6 +640,16 @@ label {
     border-color: color-mix(in srgb, var(--accent) 30%, var(--border));
     box-shadow: var(--shadow-md);
     transform: translateY(-2px);
+}
+
+.home-tile--disabled,
+.home-tile--disabled:hover {
+    opacity: 0.45;
+    pointer-events: none;
+    cursor: default;
+    box-shadow: var(--shadow-sm);
+    transform: none;
+    border-color: var(--border);
 }
 
 .home-tile-icon {

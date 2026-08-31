@@ -13,6 +13,9 @@ public partial class CollectionDetail
     [Parameter]
     public Guid Id { get; set; }
 
+    [CascadingParameter(Name = "IsOnline")]
+    private bool IsOnline { get; set; } = true;
+
     private BookCollection? _collection;
     private List<Book> _books = new();
     private bool _loading = true;
@@ -190,6 +193,11 @@ public partial class CollectionDetail
 
     private void ToggleSelecting()
     {
+        if (!IsOnline)
+        {
+            return;
+        }
+
         _selecting = !_selecting;
         if (!_selecting)
         {
@@ -258,7 +266,7 @@ public partial class CollectionDetail
             .Where(l => l.Length > 0)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
-        if (labels.Count == 0 || _selectedIds.Count == 0)
+        if (!IsOnline || labels.Count == 0 || _selectedIds.Count == 0)
         {
             return;
         }
@@ -383,7 +391,13 @@ public partial class CollectionDetail
         }
     }
 
-    private void AddBook() => Navigation.NavigateTo($"collection/{Id}/book/new");
+    private void AddBook()
+    {
+        if (IsOnline)
+        {
+            Navigation.NavigateTo($"collection/{Id}/book/new");
+        }
+    }
 
     private void OpenBook(Book book)
     {
@@ -395,6 +409,11 @@ public partial class CollectionDetail
 
     private async Task DeleteBookAsync(Book book)
     {
+        if (!IsOnline)
+        {
+            return;
+        }
+
         var confirmed = await Confirm.ConfirmAsync(
             $"Supprimer le livre « {book.Title} » ?",
             title: "Supprimer le livre");

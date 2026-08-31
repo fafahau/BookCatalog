@@ -141,10 +141,10 @@ else
         <AuthorizeView Roles="admin" Context="adminContext">
             <Authorized>
                 <div class="toolbar-admin-actions">
-                    <button type="button" class="select-toggle @(_selecting ? "active" : "")" @onclick="ToggleSelecting">
+                    <button type="button" class="select-toggle @(_selecting ? "active" : "")" @onclick="ToggleSelecting" disabled="@(!IsOnline)">
                         @(_selecting ? "Annuler la sélection" : "Sélectionner")
                     </button>
-                    <button class="primary add-book" @onclick="AddBook">+ Ajouter un livre</button>
+                    <button class="primary add-book" @onclick="AddBook" disabled="@(!IsOnline)" title="@(IsOnline ? null : "Indisponible hors ligne")">+ Ajouter un livre</button>
                 </div>
             </Authorized>
         </AuthorizeView>
@@ -156,7 +156,7 @@ else
             <span class="selection-count">@_selectedIds.Count sélectionné(s)</span>
             <button type="button" @onclick="SelectAllFiltered">Tout sélectionner</button>
             <button type="button" @onclick="ClearSelection" disabled="@(_selectedIds.Count == 0)">Tout désélectionner</button>
-            <button type="button" class="primary" @onclick="OpenLabelDialog" disabled="@(_selectedIds.Count == 0)">
+            <button type="button" class="primary" @onclick="OpenLabelDialog" disabled="@(!IsOnline || _selectedIds.Count == 0)">
                 Ajouter des labels…
             </button>
         </div>
@@ -224,7 +224,7 @@ else
                 <div class="modal-actions">
                     <button type="button" @onclick="CloseLabelDialog">Annuler</button>
                     <button type="button" class="primary" @onclick="ApplyLabelsAsync"
-                            disabled="@(_applyingLabels || (_dialogLabels.Count == 0 && string.IsNullOrWhiteSpace(_dialogLabelDraft)))">
+                            disabled="@(!IsOnline || _applyingLabels || (_dialogLabels.Count == 0 && string.IsNullOrWhiteSpace(_dialogLabelDraft)))">
                         @(_applyingLabels ? "Application…" : "Ajouter")
                     </button>
                 </div>

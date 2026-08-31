@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Components;
 using BookCatalog.Models;
 using BookCatalog.Services;
 
@@ -5,6 +6,9 @@ namespace BookCatalog.Pages;
 
 public partial class Collections
 {
+    [CascadingParameter(Name = "IsOnline")]
+    private bool IsOnline { get; set; } = true;
+
     private List<BookCollection> _collections = new();
     private Dictionary<Guid, int> _bookCounts = new();
     private bool _loading = true;
@@ -15,6 +19,10 @@ public partial class Collections
     protected override async Task OnInitializedAsync()
     {
         await ReloadAsync();
+
+        // The collections page is the natural jumping-off point before a trip to a
+        // shop, so refresh the offline copy of the whole catalogue while we're here.
+        _ = Offline.RefreshAsync(force: true);
     }
 
     private async Task ReloadAsync()
@@ -36,7 +44,7 @@ public partial class Collections
     private async Task CreateAsync()
     {
         var name = _newCollectionName.Trim();
-        if (string.IsNullOrWhiteSpace(name) || AuthService.CurrentUserId == null)
+        if (!IsOnline || string.IsNullOrWhiteSpace(name) || AuthService.CurrentUserId == null)
         {
             return;
         }
@@ -48,6 +56,11 @@ public partial class Collections
 
     private void StartRename(BookCollection collection)
     {
+        if (!IsOnline)
+        {
+            return;
+        }
+
         _editingId = collection.Id;
         _editingName = collection.Name;
     }
@@ -61,7 +74,7 @@ public partial class Collections
     private async Task SaveRenameAsync(Guid id)
     {
         var name = _editingName.Trim();
-        if (!string.IsNullOrWhiteSpace(name))
+        if (IsOnline && !string.IsNullOrWhiteSpace(name))
         {
             await CollectionService.RenameAsync(id, name);
         }
@@ -72,6 +85,11 @@ public partial class Collections
 
     private async Task DeleteAsync(BookCollection collection)
     {
+        if (!IsOnline)
+        {
+            return;
+        }
+
         var confirmed = await Confirm.ConfirmAsync(
             $"Supprimer la collection « {collection.Name} » et tous ses livres ?",
             title: "Supprimer la collection");

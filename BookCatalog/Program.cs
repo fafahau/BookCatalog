@@ -16,7 +16,9 @@ builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.
 builder.Services.AddSingleton(sp => (IJSInProcessRuntime)sp.GetRequiredService<IJSRuntime>());
 builder.Services.AddSingleton<LocalStorageSessionPersistence>();
 builder.Services.AddSingleton<UiStateStore>();
+builder.Services.AddSingleton<OfflineLibraryStore>();
 builder.Services.AddSingleton<SupabaseService>();
+builder.Services.AddSingleton<OfflineLibraryService>();
 builder.Services.AddSingleton<AuthService>();
 builder.Services.AddSingleton<ImageUploadService>();
 builder.Services.AddSingleton<ImageViewerService>();
@@ -36,5 +38,10 @@ var host = builder.Build();
 var supabaseService = host.Services.GetRequiredService<SupabaseService>();
 await supabaseService.InitializeAsync();
 await host.Services.GetRequiredService<AuthService>().RestoreSessionAsync();
+
+var offlineLibrary = host.Services.GetRequiredService<OfflineLibraryService>();
+offlineLibrary.Initialize();
+// Warm / refresh the offline snapshot in the background — never block startup on it.
+_ = offlineLibrary.RefreshAsync();
 
 await host.RunAsync();
