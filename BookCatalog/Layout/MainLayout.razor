@@ -1,8 +1,23 @@
 @inherits LayoutComponentBase
+@implements IDisposable
+@inject OfflineLibraryService Offline
 
 <NavMenu/>
-<main class="content">
-    @Body
-</main>
+<OfflineBanner/>
+@* Every page can read this to disable actions that need the network. Non-fixed,
+   so the tree re-renders when connectivity flips. *@
+<CascadingValue Value="Offline.IsOnline" Name="IsOnline">
+    <main class="content">
+        @Body
+    </main>
+</CascadingValue>
 <FullscreenImage/>
 <ConfirmDialog/>
+
+@code {
+    protected override void OnInitialized() => Offline.Changed += OnChanged;
+
+    private void OnChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Offline.Changed -= OnChanged;
+}

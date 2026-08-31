@@ -4,10 +4,13 @@
 @inject AuthService AuthService
 @inject NavigationManager Navigation
 @inject ConfirmService Confirm
+@inject OfflineLibraryService Offline
 
 <PageTitle>Collections</PageTitle>
 
 <h1>Collections</h1>
+
+<OfflineSyncStatus />
 
 @if (_loading)
 {
@@ -18,8 +21,8 @@ else
     <AuthorizeView Roles="admin" Context="adminContext">
         <Authorized>
             <div class="new-collection">
-                <input @bind="_newCollectionName" @bind:event="oninput" placeholder="Nom de la nouvelle collection"/>
-                <button class="primary" @onclick="CreateAsync" disabled="@string.IsNullOrWhiteSpace(_newCollectionName)">Ajouter</button>
+                <input @bind="_newCollectionName" @bind:event="oninput" placeholder="Nom de la nouvelle collection" disabled="@(!IsOnline)"/>
+                <button class="primary" @onclick="CreateAsync" disabled="@(!IsOnline || string.IsNullOrWhiteSpace(_newCollectionName))">Ajouter</button>
             </div>
         </Authorized>
     </AuthorizeView>
@@ -37,7 +40,7 @@ else
                     @if (_editingId == collection.Id)
                     {
                         <input @bind="_editingName" @bind:event="oninput"/>
-                        <button class="icon-button" title="Enregistrer" @onclick="() => SaveRenameAsync(collection.Id)">✔</button>
+                        <button class="icon-button" title="Enregistrer" @onclick="() => SaveRenameAsync(collection.Id)" disabled="@(!IsOnline)">✔</button>
                         <button class="icon-button" title="Annuler" @onclick="CancelRename">✕</button>
                     }
                     else
@@ -47,8 +50,8 @@ else
                         <span class="collection-percent" title="Part du total des livres">@GetBookPercent(collection.Id).ToString("0.#")&nbsp;%</span>
                         <AuthorizeView Roles="admin" Context="rowAdminContext">
                             <Authorized>
-                                <button class="icon-button" title="Renommer" @onclick="() => StartRename(collection)">✎</button>
-                                <button class="icon-button danger" title="Supprimer" @onclick="() => DeleteAsync(collection)">🗑</button>
+                                <button class="icon-button" title="Renommer" @onclick="() => StartRename(collection)" disabled="@(!IsOnline)">✎</button>
+                                <button class="icon-button danger" title="Supprimer" @onclick="() => DeleteAsync(collection)" disabled="@(!IsOnline)">🗑</button>
                             </Authorized>
                         </AuthorizeView>
                     }

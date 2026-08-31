@@ -15,8 +15,8 @@ else
 {
     <div class="new-label">
         <input placeholder="Nom du nouveau label" @bind="_newLabelName" @bind:event="oninput"
-               @onkeydown="OnNewLabelKeyDown"/>
-        <button class="primary" disabled="@(_busy || string.IsNullOrWhiteSpace(_newLabelName))"
+               @onkeydown="OnNewLabelKeyDown" disabled="@(!IsOnline)"/>
+        <button class="primary" disabled="@(_busy || !IsOnline || string.IsNullOrWhiteSpace(_newLabelName))"
                 @onclick="CreateAsync">Ajouter</button>
     </div>
 
@@ -35,11 +35,11 @@ else
             @foreach (var label in _labels)
             {
                 <li class="label-row" @key="label.Id">
-                    <input value="@_drafts[label.Id]" @oninput="e => _drafts[label.Id] = (string?)e.Value ?? string.Empty"/>
+                    <input value="@_drafts[label.Id]" @oninput="e => _drafts[label.Id] = (string?)e.Value ?? string.Empty" disabled="@(!IsOnline)"/>
                     <button class="primary"
-                            disabled="@(_busy || string.IsNullOrWhiteSpace(_drafts[label.Id]) || _drafts[label.Id].Trim() == label.Name)"
+                            disabled="@(_busy || !IsOnline || string.IsNullOrWhiteSpace(_drafts[label.Id]) || _drafts[label.Id].Trim() == label.Name)"
                             @onclick="() => RenameAsync(label)">Renommer</button>
-                    <button class="icon-button danger" title="Supprimer" disabled="@_busy" @onclick="() => DeleteAsync(label)">🗑</button>
+                    <button class="icon-button danger" title="Supprimer" disabled="@(_busy || !IsOnline)" @onclick="() => DeleteAsync(label)">🗑</button>
                 </li>
             }
         </ul>

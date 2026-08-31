@@ -62,6 +62,7 @@
                         @if (hit.Book.PhotoUrl1 is { } cover)
                         {
                             <img class="book-thumb zoomable" src="@cover" alt=""
+                                 onerror="this.onerror=null;this.src='images/istockphoto-1125976691-170667a.jpg';this.classList.add('no-cover');"
                                  @onclick="() => ImageViewer.Show(cover)"
                                  @onclick:preventDefault="true" @onclick:stopPropagation="true"/>
                         }
@@ -103,6 +104,7 @@
                             @if (hit.Book.PhotoUrl1 is { } cover)
                             {
                                 <img class="book-thumb zoomable" src="@cover" alt=""
+                                     onerror="this.onerror=null;this.src='images/istockphoto-1125976691-170667a.jpg';this.classList.add('no-cover');"
                                      @onclick="() => ImageViewer.Show(cover)"
                                      @onclick:preventDefault="true" @onclick:stopPropagation="true"/>
                             }

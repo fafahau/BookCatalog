@@ -1,0 +1,30 @@
+@implements IDisposable
+@inject OfflineLibraryService Offline
+
+@if (!Offline.IsOnline)
+{
+    <div class="offline-banner" role="status">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M1 1l22 22"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/>
+            <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.58 9"/>
+            <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
+            <line x1="12" y1="20" x2="12.01" y2="20"/>
+        </svg>
+        @if (Offline.HasSnapshot)
+        {
+            <span>Mode hors ligne — bibliothèque du @Offline.SyncedAt!.Value.ToLocalTime().ToString("dd/MM/yyyy à HH:mm"). Lecture seule.</span>
+        }
+        else
+        {
+            <span>Mode hors ligne — aucune donnée enregistrée. Reconnectez-vous une fois pour pouvoir consulter vos livres hors ligne.</span>
+        }
+    </div>
+}
+
+@code {
+    protected override void OnInitialized() => Offline.Changed += OnChanged;
+
+    private void OnChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Offline.Changed -= OnChanged;
+}

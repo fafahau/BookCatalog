@@ -7,14 +7,16 @@ namespace BookCatalog.Services;
 public class AuthService
 {
     private readonly Supabase.Client _client;
+    private readonly OfflineLibraryStore _offlineStore;
 
     public Profile? CurrentProfile { get; private set; }
 
     public event Action? AuthStateChanged;
 
-    public AuthService(SupabaseService supabaseService)
+    public AuthService(SupabaseService supabaseService, OfflineLibraryStore offlineStore)
     {
         _client = supabaseService.Client;
+        _offlineStore = offlineStore;
         _client.Auth.AddStateChangedListener(OnAuthStateChange);
     }
 
@@ -172,10 +174,25 @@ public class AuthService
             CurrentProfile = await _client.From<Profile>()
                 .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, userId.Value.ToString())
                 .Single();
+
+            if (CurrentProfile != null)
+            {
+                // Remembered so the user keeps their role (and stays past the login
+                // redirect) when the profile fetch can't reach the network.
+                _offlineStore.SaveProfile(new CachedProfile
+                {
+                    UserId = userId.Value,
+                    Role = CurrentProfile.Role,
+                    DisplayName = CurrentProfile.DisplayName,
+                });
+            }
         }
         catch
         {
-            CurrentProfile = null;
+            var cached = _offlineStore.LoadProfile();
+            CurrentProfile = cached?.UserId == userId.Value
+                ? new Profile { Id = userId.Value, Role = cached.Role, DisplayName = cached.DisplayName }
+                : null;
         }
     }
 }
