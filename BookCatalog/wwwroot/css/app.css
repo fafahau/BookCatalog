@@ -696,9 +696,21 @@ label {
 /* ISBN lookup inside a collection */
 
 .isbn-lookup-panel {
-    margin-top: 0.85rem;
-    padding-top: 0.85rem;
+    padding: 1rem 1.15rem 1.25rem;
     border-top: 1px solid var(--border);
+    background: var(--surface-alt);
+}
+
+.isbn-lookup-panel .isbn-search {
+    margin-bottom: 0;
+}
+
+.isbn-lookup-panel .isbn-search input {
+    background: var(--surface);
+}
+
+.isbn-lookup-panel > :not(.isbn-search) {
+    margin-top: 0.75rem;
 }
 
 .isbn-verdict {
@@ -943,12 +955,15 @@ label {
 .filters {
     display: flex;
     flex-direction: column;
-    gap: 0.6rem;
-    padding: 0.85rem 0.9rem;
+    gap: 0.75rem;
+    padding: 1.1rem 1.15rem 1.25rem;
+    background: var(--surface-alt);
 }
 
-.filters input {
+.filters input,
+.filters select {
     margin-top: 0;
+    background: var(--surface);
 }
 
 .sort-select {
@@ -958,6 +973,7 @@ label {
     font-size: 0.85rem;
     color: var(--text-muted);
     font-weight: 500;
+    margin-bottom: 0;
 }
 
 .sort-select select {
@@ -1751,11 +1767,22 @@ label {
         flex-direction: row;
         align-items: center;
         flex-wrap: wrap;
+        gap: 0.75rem 0.9rem;
     }
 
     .filters input {
         flex: 1;
-        min-width: 160px;
+        min-width: 170px;
+    }
+
+    .sort-select {
+        flex: 1;
+        min-width: 190px;
+    }
+
+    .clear-filters {
+        margin-left: auto;
+        align-self: center;
     }
 }
 
